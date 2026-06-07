@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Noto Sans KR', sans-serif;
+  --color-navy-900: #0f1f47;
+  --color-navy-800: #1e3a8a;
+  --color-navy-700: #1d4ed8;
+}
+
+* {
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+/* 마퀴 애니메이션 */
+@keyframes ticker {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(-100%); }
+}
+.ticker-text {
+  animation: ticker 25s linear infinite;
+}
+
+/* ping 애니메이션 */
+@keyframes loc-ping {
+  75%, 100% { transform: scale(2.2); opacity: 0; }
+}
+.loc-ping {
+  animation: loc-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* 핀 바운스 */
+@keyframes pin-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-5px); }
+}
+.pin-bounce {
+  animation: pin-bounce 1.8s ease-in-out infinite;
+}
+
+/* 상태 점 깜빡임 */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+.blink {
+  animation: blink 2s ease-in-out infinite;
+}
+
+/* 스크롤 fade-up */
+.fade-up {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.fade-up.visible {
+  opacity: 1;
+  transform: translateY(0);
+}

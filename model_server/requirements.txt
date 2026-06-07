@@ -1,0 +1,14 @@
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-multipart>=0.0.9
+pydantic>=2.0.0
+
+# KoBERT (RobertaForSequenceClassification)
+torch>=2.0.0
+transformers>=4.40.0
+safetensors>=0.4.0
+sentencepiece>=0.1.99
+
+# ASR (음성 인식) — 사용 시 주석 해제
+# faster-whisper>=1.0.0
+# openai-whisper>=20231117
