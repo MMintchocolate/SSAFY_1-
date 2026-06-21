@@ -9,13 +9,14 @@ const { isLoggedIn, user, logout } = useAuth()
 const mobileOpen = ref(false)
 
 const navLinks = [
-  { label: '금융상품',       to: '/products' },
-  { label: '지점찾기',       to: '/branches' },
-  { label: '영수증 장부',    to: '/receipts' },
-  { label: '보이스피싱 탐지', to: '/voicephishing', highlight: true },
-  { label: '지출 분석',      to: '/spending' },
-  { label: '결제 시뮬',     to: '/notify-sim' },
-  { label: '보안 커뮤니티',  to: '/community' },
+  { label: '금융상품',   to: '/products' },
+  { label: '지점찾기',   to: '/branches' },
+  { label: '영수증',     to: '/receipts' },
+  { label: '피싱탐지',   to: '/voicephishing' },
+  { label: '지출분석',   to: '/spending' },
+  { label: '결제시뮬',   to: '/notify-sim' },
+  { label: '보안뉴스',   to: '/news' },
+  { label: '커뮤니티',   to: '/community' },
 ]
 
 async function handleLogout() {
@@ -48,15 +49,15 @@ async function handleLogout() {
           v-for="link in navLinks"
           :key="link.to"
           :to="link.to"
-          class="px-3.5 py-2 text-sm font-medium rounded-lg transition-all"
+          class="px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap"
           :class="$route.path === link.to
-            ? 'text-blue-700 bg-blue-50 font-semibold'
+            ? 'text-blue-700 bg-blue-50'
             : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'"
         >
           {{ link.label }}
         </RouterLink>
 
-        <div class="w-px h-5 bg-gray-200 mx-2"></div>
+        <div class="w-px h-5 bg-gray-200 mx-1"></div>
 
         <!-- 로그인 상태 -->
         <template v-if="isLoggedIn">
