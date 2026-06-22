@@ -10,7 +10,7 @@ SECRET_KEY = os.environ['DJANGO_SECRET_KEY']
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
-
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'docforms',
     'spending',
     'news',
+    'stocks',
 ]
 
 MIDDLEWARE = [
@@ -74,6 +75,8 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
+
+AUTH_USER_MODEL = 'accounts.User'
 
 LANGUAGE_CODE = 'ko-kr'
 TIME_ZONE = 'Asia/Seoul'
@@ -132,3 +135,8 @@ NCP_MAP_CLIENT_SECRET = os.environ.get('NCP_MAP_CLIENT_SECRET', '')
 # Naver Developers — 지역 검색 API
 NAVER_SEARCH_CLIENT_ID     = os.environ.get('NAVER_SEARCH_CLIENT_ID', '')
 NAVER_SEARCH_CLIENT_SECRET = os.environ.get('NAVER_SEARCH_CLIENT_SECRET', '')
+
+# fixtures 경로 직접 설정
+FIXTURE_DIRS = [
+    os.path.join(BASE_DIR, 'fixtures'),
+]

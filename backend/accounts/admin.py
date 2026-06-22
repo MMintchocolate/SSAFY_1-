@@ -1,3 +1,14 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
+from .models import User
 
-# Register your models here.
+
+@admin.register(User)
+class CustomUserAdmin(UserAdmin):
+    fieldsets = UserAdmin.fieldsets + (
+        ('추가 정보', {'fields': ('nickname',)}),
+    )
+    add_fieldsets = UserAdmin.add_fieldsets + (
+        ('추가 정보', {'fields': ('nickname',)}),
+    )
+    list_display = ('username', 'nickname', 'email', 'is_staff')

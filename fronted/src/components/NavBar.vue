@@ -15,6 +15,8 @@ const navLinks = [
   { label: '피싱탐지',   to: '/voicephishing' },
   { label: '지출분석',   to: '/spending' },
   { label: '결제시뮬',   to: '/notify-sim' },
+  { label: '주식',       to: '/stocks' },
+  { label: '매수신호',   to: '/indicators' },
   { label: '보안뉴스',   to: '/news' },
   { label: '커뮤니티',   to: '/community' },
 ]

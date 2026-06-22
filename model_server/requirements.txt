@@ -9,6 +9,6 @@ transformers>=4.40.0
 safetensors>=0.4.0
 sentencepiece>=0.1.99
 
-# ASR (음성 인식) — 사용 시 주석 해제
+# ASR (speech recognition) -- uncomment to enable
 # faster-whisper>=1.0.0
 # openai-whisper>=20231117

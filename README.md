@@ -84,7 +84,7 @@ voice/
 └── model_server/     # FastAPI 보이스피싱 탐지 모델 서버
     └── model/        # HuggingFace 모델 파일
 ```
-
+실시간 서버 uvicorn kis_broker:app --host 0.0.0.0 --port 8002 --reload
 ---
 
 ## 기능 목록

@@ -1,6 +1,7 @@
-from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
+
+from .models import User
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -9,7 +10,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = User
-        fields = ('username', 'email', 'password', 'password2')
+        fields = ('username', 'email', 'nickname', 'password', 'password2')
 
     def validate(self, data):
         if data['password'] != data['password2']:
@@ -26,4 +27,16 @@ class RegisterSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model  = User
-        fields = ('id', 'username', 'email', 'date_joined')
+        fields = ('id', 'username', 'email', 'nickname', 'date_joined')
+
+
+class NicknameUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = User
+        fields = ('nickname',)
+
+    def validate_nickname(self, value):
+        user = self.instance
+        if User.objects.filter(nickname=value).exclude(pk=user.pk).exists():
+            raise serializers.ValidationError('이미 사용 중인 닉네임입니다.')
+        return value

@@ -1,4 +1,3 @@
-from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -6,7 +5,8 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 
-from .serializers import RegisterSerializer, UserSerializer
+from .models import User
+from .serializers import RegisterSerializer, UserSerializer, NicknameUpdateSerializer
 
 
 def _token_pair(user):
@@ -58,11 +58,21 @@ def logout(request):
         token = RefreshToken(refresh_token)
         token.blacklist()
     except TokenError:
-        pass  # 이미 만료·블랙리스트된 토큰도 정상 처리
+        pass
     return Response({'detail': '로그아웃 되었습니다.'})
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def me(request):
+    return Response(UserSerializer(request.user).data)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_nickname(request):
+    serializer = NicknameUpdateSerializer(request.user, data=request.data, partial=True)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    serializer.save()
     return Response(UserSerializer(request.user).data)
