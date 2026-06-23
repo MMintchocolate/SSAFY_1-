@@ -1,4 +1,5 @@
 <script setup>
+// @ts-nocheck
 import { ref, computed, onMounted } from 'vue'
 import NavBar from '@/components/NavBar.vue'
 import AppFooter from '@/components/AppFooter.vue'
@@ -9,7 +10,7 @@ import {
 } from 'chart.js'
 import {
   Newspaper, ExternalLink, ChevronDown, ChevronUp,
-  Loader2, AlertTriangle, DatabaseZap, Search,
+  Loader2, AlertTriangle, DatabaseZap, Search, X,
   Layers, TrendingUp, CircleDot, Sparkles, BookOpen,
 } from '@lucide/vue'
 
@@ -22,25 +23,57 @@ const PAGE_TABS = [
 ]
 const pageTab = ref('list')
 
-// ─── 요약 상태 (id → { loading, error }) ────────────────────────────────────
-const summaryState = ref({})   // { [newsId]: { loading: bool, error: str } }
+// ─── 키워드 관리 (localStorage 영속) ────────────────────────────────────────
+const DEFAULT_KWS = ['유출', '해킹', '주식']
+const MAX_KWS = 3
 
-// ─── 뉴스 목록 상태 ────────────────────────────────────────────────────────────
-const KEYWORD_TABS = [
-  { key: '',    label: '전체' },
-  { key: '유출', label: '유출' },
-  { key: '해킹', label: '해킹' },
-]
+function _loadKws() {
+  try { const s = localStorage.getItem('news_keywords'); if (s) return JSON.parse(s) } catch {}
+  return [...DEFAULT_KWS]
+}
+const userKeywords = ref(_loadKws())
+const kwInput      = ref('')
+const kwPanelOpen  = ref(false)
+
+function saveKws() { localStorage.setItem('news_keywords', JSON.stringify(userKeywords.value)) }
+
+function addKeyword() {
+  const k = kwInput.value.trim()
+  if (!k || userKeywords.value.includes(k) || userKeywords.value.length >= MAX_KWS) return
+  userKeywords.value = [...userKeywords.value, k]
+  saveKws(); kwInput.value = ''
+}
+function removeKeyword(kw) {
+  userKeywords.value = userKeywords.value.filter(k => k !== kw)
+  saveKws()
+  if (activeKeyword.value === kw) { activeKeyword.value = ''; loadNews() }
+  if (clusterKeyword.value === kw) clusterKeyword.value = ''
+}
+function resetKeywords() {
+  userKeywords.value = [...DEFAULT_KWS]; saveKws()
+  activeKeyword.value = ''; loadNews(); loadStats()
+}
+
+// ─── 키워드 탭 (computed) ─────────────────────────────────────────────────────
+const keywordTabs = computed(() => [
+  { key: '', label: '전체' },
+  ...userKeywords.value.map(k => ({ key: k, label: k })),
+])
+
+// ─── 요약 상태 ───────────────────────────────────────────────────────────────
+const summaryState = ref({})
+
+// ─── 뉴스 목록 상태 ──────────────────────────────────────────────────────────
 const activeKeyword = ref('')
 const newsList      = ref([])
-const stats         = ref({ total: 0, 유출: 0, 해킹: 0 })
+const stats         = ref({ total: 0 })
 const loading       = ref(false)
 const crawling      = ref(false)
 const errorMsg      = ref('')
 const expandedId    = ref(null)
 const searchQ       = ref('')
 
-// ─── 군집 분석 상태 ────────────────────────────────────────────────────────────
+// ─── 군집 분석 상태 ──────────────────────────────────────────────────────────
 const clusterKeyword  = ref('')
 const clusterResult   = ref(null)
 const clusterLoading  = ref(false)
@@ -66,7 +99,8 @@ async function loadNews() {
 
 async function loadStats() {
   try {
-    const res = await fetch('/api/news/stats/')
+    const qs  = `?keywords=${encodeURIComponent(userKeywords.value.join(','))}`
+    const res = await fetch(`/api/news/stats/${qs}`)
     if (res.ok) stats.value = await res.json()
   } catch {}
 }
@@ -76,10 +110,14 @@ async function startCrawl() {
   crawling.value = true
   errorMsg.value = ''
   try {
-    const res = await fetch('/api/news/crawl/', { method: 'POST' })
+    const res = await fetch('/api/news/crawl/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keywords: userKeywords.value }),
+    })
     if (!res.ok) {
-      const ct   = res.headers.get('content-type') || ''
-      const msg  = ct.includes('json') ? (await res.json()).error : null
+      const ct  = res.headers.get('content-type') || ''
+      const msg = ct.includes('json') ? (await res.json()).error : null
       throw new Error(msg || `서버 오류 (${res.status}) — Django 서버가 실행 중인지 확인하세요.`)
     }
     await res.json()
@@ -213,10 +251,14 @@ function fmtDate(iso) {
   })
 }
 
+const KW_COLORS = [
+  'bg-orange-100 text-orange-700 border-orange-200',
+  'bg-red-100 text-red-700 border-red-200',
+  'bg-blue-100 text-blue-700 border-blue-200',
+]
 function keywordColor(kw) {
-  return kw === '유출'
-    ? 'bg-orange-100 text-orange-700 border-orange-200'
-    : 'bg-red-100 text-red-700 border-red-200'
+  const idx = userKeywords.value.indexOf(kw)
+  return KW_COLORS[idx >= 0 ? idx % KW_COLORS.length : 0]
 }
 
 const RANK_LABELS = ['1위', '2위', '3위']
@@ -250,19 +292,24 @@ onMounted(() => {
             <Newspaper class="w-7 h-7 text-blue-700" />
           </div>
           <h1 class="text-3xl font-black text-gray-900">보안 뉴스</h1>
-          <p class="text-gray-500 text-sm mt-1">네이버 뉴스에서 수집한 최신 보안 이슈 (유출 · 해킹)</p>
+          <p class="text-gray-500 text-sm mt-1">
+            네이버 뉴스에서 수집한 최신 이슈 ({{ userKeywords.join(' · ') }})
+          </p>
         </div>
 
         <div class="flex flex-col items-end gap-2">
-          <div class="flex gap-2 text-sm">
+          <div class="flex flex-wrap gap-2 text-sm justify-end">
             <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-gray-600">
               전체 <strong class="text-gray-800">{{ stats.total }}</strong>건
             </span>
-            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-orange-50 text-orange-700">
-              유출 <strong>{{ stats['유출'] }}</strong>건
-            </span>
-            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-50 text-red-700">
-              해킹 <strong>{{ stats['해킹'] }}</strong>건
+            <span v-for="(kw, i) in userKeywords" :key="kw"
+              class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-medium"
+              :class="[
+                i === 0 ? 'bg-orange-50 text-orange-700' :
+                i === 1 ? 'bg-red-50 text-red-700' :
+                          'bg-blue-50 text-blue-700'
+              ]">
+              {{ kw }} <strong>{{ stats[kw] ?? 0 }}</strong>건
             </span>
           </div>
           <button
@@ -310,15 +357,23 @@ onMounted(() => {
 
         <!-- 키워드 탭 + 검색 -->
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
-          <div class="flex gap-1 p-1 bg-white border border-gray-200 rounded-xl shadow-sm">
-            <button
-              v-for="tab in KEYWORD_TABS" :key="tab.key"
-              @click="setKeywordTab(tab.key)"
-              class="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all"
-              :class="activeKeyword === tab.key
-                ? 'bg-blue-700 text-white shadow'
-                : 'text-gray-600 hover:bg-gray-100'"
-            >{{ tab.label }}</button>
+          <div class="flex items-center gap-2 flex-wrap">
+            <div class="flex gap-1 p-1 bg-white border border-gray-200 rounded-xl shadow-sm">
+              <button
+                v-for="tab in keywordTabs" :key="tab.key"
+                @click="setKeywordTab(tab.key)"
+                class="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all"
+                :class="activeKeyword === tab.key
+                  ? 'bg-blue-700 text-white shadow'
+                  : 'text-gray-600 hover:bg-gray-100'"
+              >{{ tab.label }}</button>
+            </div>
+            <!-- 키워드 관리 버튼 -->
+            <button @click="kwPanelOpen = !kwPanelOpen"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all"
+              :class="kwPanelOpen ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-500 hover:border-blue-200 hover:text-blue-600'">
+              <Search class="w-3.5 h-3.5" />키워드 설정
+            </button>
           </div>
           <div class="relative w-full sm:w-64">
             <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -326,6 +381,54 @@ onMounted(() => {
               class="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
             />
           </div>
+        </div>
+
+        <!-- 키워드 관리 패널 -->
+        <div v-if="kwPanelOpen"
+          class="bg-white border border-blue-100 rounded-2xl shadow-sm p-4 mb-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <p class="text-sm font-bold text-gray-800">
+              크롤링 키워드 설정
+              <span class="ml-1.5 text-xs font-normal text-gray-400">(최대 {{ MAX_KWS }}개)</span>
+            </p>
+            <button @click="resetKeywords"
+              class="text-xs text-gray-400 hover:text-blue-600 transition-colors font-medium">
+              기본값 복원
+            </button>
+          </div>
+          <!-- 현재 키워드 뱃지 -->
+          <div class="flex flex-wrap gap-2">
+            <span v-for="kw in userKeywords" :key="kw"
+              class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold border"
+              :class="keywordColor(kw)">
+              {{ kw }}
+              <button @click="removeKeyword(kw)"
+                class="hover:opacity-70 transition-opacity ml-0.5">
+                <X class="w-3 h-3" />
+              </button>
+            </span>
+            <span v-if="userKeywords.length === 0" class="text-xs text-gray-400">키워드 없음</span>
+          </div>
+          <!-- 추가 입력 -->
+          <div v-if="userKeywords.length < MAX_KWS" class="flex gap-2">
+            <input
+              v-model="kwInput"
+              @keydown.enter="addKeyword"
+              placeholder="새 키워드 입력 후 Enter (예: 보안, 피싱, AI)"
+              class="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+            />
+            <button @click="addKeyword"
+              :disabled="!kwInput.trim() || userKeywords.length >= MAX_KWS"
+              class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-bold rounded-xl transition-all">
+              추가
+            </button>
+          </div>
+          <p v-else class="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            키워드가 최대 {{ MAX_KWS }}개입니다. 기존 키워드를 삭제 후 추가하세요.
+          </p>
+          <p class="text-xs text-gray-400">
+            키워드는 브라우저에 저장됩니다. 크롤링 버튼 클릭 시 설정된 키워드로 뉴스를 수집합니다.
+          </p>
         </div>
 
         <!-- 로딩 -->
@@ -437,7 +540,7 @@ onMounted(() => {
               <label class="block text-xs font-semibold text-gray-500 mb-1.5">대상 키워드</label>
               <div class="flex gap-1">
                 <button
-                  v-for="tab in KEYWORD_TABS" :key="tab.key"
+                  v-for="tab in keywordTabs" :key="tab.key"
                   @click="clusterKeyword = tab.key"
                   class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all border"
                   :class="clusterKeyword === tab.key

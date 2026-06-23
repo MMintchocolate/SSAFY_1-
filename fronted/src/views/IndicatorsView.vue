@@ -3,7 +3,7 @@
 import { ref, onMounted } from 'vue'
 import NavBar from '@/components/NavBar.vue'
 import AppFooter from '@/components/AppFooter.vue'
-import { Star, TrendingUp, TrendingDown, Activity, BarChart2, AlertCircle, RefreshCw, HelpCircle, ChevronDown } from '@lucide/vue'
+import { Star, TrendingUp, TrendingDown, Activity, BarChart2, AlertCircle, RefreshCw, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Newspaper, ExternalLink, Play } from '@lucide/vue'
 import { useAuth } from '@/composables/useAuth'
 
 const { authFetch } = useAuth()
@@ -14,6 +14,15 @@ const selected    = ref(null)
 const indicators  = ref(null)
 const loading     = ref(false)
 const error       = ref('')
+
+// ── 종목 뉴스 ─────────────────────────────────────────────────────
+const stockNews        = ref([])
+const newsLoading      = ref(false)
+const newsError        = ref('')
+
+// 종목 유튜브 데이터
+const stock_youtube_data = ref([])
+const youtubeIndex       = ref(0)
 
 // 각 지표 설명 토글
 const infoOpen = ref({ ma: false, rsi: false, macd: false, bollinger: false })
@@ -72,6 +81,10 @@ async function selectStock(item) {
   indicators.value = null
   error.value      = ''
   loading.value    = true
+  stockNews.value  = []
+  newsError.value  = ''
+  stock_youtube_data.value = []
+  youtubeIndex.value       = 0
   try {
     const res  = await authFetch(`${API}/${item.symbol}/indicators/`)
     const data = await res.json()
@@ -81,6 +94,29 @@ async function selectStock(item) {
     error.value = e.message || '지표 계산 실패'
   } finally {
     loading.value = false
+  }
+  // 종목 이름을 백엔드로 전송
+  const res = await fetch(`/api/stocks/stock-name/?stock_name=${encodeURIComponent(item.name || item.symbol)}`)
+  console.log("프론트 조회 완료", res)  
+  const data = await res.json()
+  stock_youtube_data.value = data['videos']
+  console.log("데이터 조회 완료", data['videos'])  
+  // 지표 로딩과 병렬로 뉴스 조회
+  fetchStockNews(item.name || item.symbol)
+}
+
+async function fetchStockNews(query) {
+  newsLoading.value = true
+  newsError.value   = ''
+  try {
+    const res  = await fetch(`/api/news/stock/?q=${encodeURIComponent(query)}&display=5`)
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || '뉴스 조회 실패')
+    stockNews.value = data.results ?? []
+  } catch (e) {
+    newsError.value = e.message || '뉴스 조회 실패'
+  } finally {
+    newsLoading.value = false
   }
 }
 
@@ -92,6 +128,10 @@ function fmt(n, digits = 2) {
 
 function signalLabel(sig) {
   return { buy: '매수', sell: '매도', oversold: '과매도(매수)', overbought: '과매수(매도)', neutral: '중립', golden: '골든크로스', dead: '데드크로스' }[sig] ?? sig
+}
+
+function nearCurrent(i) {
+  return Math.abs(i - youtubeIndex.value) <= 2
 }
 
 function signalClass(sig) {
@@ -455,12 +495,128 @@ onMounted(loadWatchlist)
               </div>
 
             </div><!-- /grid -->
+
+            <!-- ── 관련 뉴스 ── -->
+            <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+              <div class="flex items-center gap-2 mb-4">
+                <Newspaper class="w-4 h-4 text-blue-500" />
+                <h3 class="font-bold text-gray-900 text-sm">관련 뉴스</h3>
+                <span class="text-xs text-gray-400 ml-1">{{ selected.name }}</span>
+                <span v-if="newsLoading" class="ml-auto">
+                  <RefreshCw class="w-4 h-4 text-blue-400 animate-spin" />
+                </span>
+              </div>
+
+              <!-- 에러 -->
+              <p v-if="newsError" class="text-xs text-red-500 py-3 text-center">{{ newsError }}</p>
+
+              <!-- 결과 없음 -->
+              <p v-else-if="!newsLoading && stockNews.length === 0" class="text-xs text-gray-400 py-3 text-center">뉴스 결과가 없습니다</p>
+
+              <!-- 뉴스 목록 -->
+              
+              <ul v-else class="divide-y divide-gray-50">
+              
+                <li v-for="(item, i) in stockNews" :key="i" class="py-3 first:pt-0 last:pb-0">
+                  <a :href="item.url" target="_blank" rel="noopener noreferrer"
+                    class="group flex items-start gap-3 hover:opacity-80 transition-opacity"
+                  >
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
+                        {{ item.title }}
+                      </p>
+                      <p v-if="item.description" class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ item.description }}</p>
+                      <p class="text-xs text-gray-300 mt-1">{{ item.pub_date }}</p>
+                    </div>
+                    <ExternalLink class="w-3.5 h-3.5 text-gray-300 group-hover:text-blue-400 flex-shrink-0 mt-0.5 transition-colors" />
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <!-- ── 관련 영상 ── -->
+            <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+              <div class="flex items-center gap-2 mb-4">
+                <Play class="w-4 h-4 text-red-500" />
+                <h3 class="font-bold text-gray-900 text-sm">관련 영상</h3>
+                <span class="text-xs text-gray-400 ml-1">{{ selected.name }}</span>
+                <span v-if="stock_youtube_data.length > 0" class="ml-auto text-xs text-gray-400">
+                  {{ youtubeIndex + 1 }} / {{ stock_youtube_data.length }}
+                </span>
+              </div>
+
+              <!-- 로딩 -->
+              <div v-if="stock_youtube_data.length === 0 && loading" class="py-10 text-center">
+                <RefreshCw class="w-6 h-6 text-gray-300 animate-spin mx-auto" />
+              </div>
+
+              <!-- 결과 없음 -->
+              <p v-else-if="stock_youtube_data.length === 0" class="text-xs text-gray-400 py-6 text-center">영상 결과가 없습니다</p>
+
+              <!-- 플레이어 -->
+              <div v-else>
+                <!-- iframe 임베드 -->
+                <div class="aspect-video rounded-xl overflow-hidden mb-3 bg-black">
+                  <iframe
+                    :src="`https://www.youtube.com/embed/${stock_youtube_data[youtubeIndex].video_id}`"
+                    class="w-full h-full"
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen
+                  />
+                </div>
+
+                <!-- 제목 -->
+                <p class="text-sm font-semibold text-gray-900 mb-4 line-clamp-2">
+                  {{ stock_youtube_data[youtubeIndex].title }}
+                </p>
+
+                <!-- 이전 / 다음 -->
+                <div class="flex items-center justify-between gap-2">
+                  <button
+                    @click="youtubeIndex--"
+                    :disabled="youtubeIndex === 0"
+                    class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-semibold transition-all border"
+                    :class="youtubeIndex === 0
+                      ? 'border-gray-100 text-gray-300 cursor-not-allowed'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'"
+                  >
+                    <ChevronLeft class="w-4 h-4" /> 이전
+                  </button>
+
+                  <!-- 썸네일 목록 (현재 ±2) -->
+                  <div class="flex gap-1.5 overflow-hidden">
+                    <button
+                      v-for="(v, i) in stock_youtube_data"
+                      :key="i"
+                      v-show="nearCurrent(i)"
+                      @click="youtubeIndex = i"
+                      class="w-12 h-9 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-all"
+                      :class="i === youtubeIndex ? 'border-blue-500' : 'border-transparent opacity-60 hover:opacity-100'"
+                    >
+                      <img :src="v.thumbnail_url" class="w-full h-full object-cover" />
+                    </button>
+                  </div>
+
+                  <button
+                    @click="youtubeIndex++"
+                    :disabled="youtubeIndex === stock_youtube_data.length - 1"
+                    class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-semibold transition-all border"
+                    :class="youtubeIndex === stock_youtube_data.length - 1
+                      ? 'border-gray-100 text-gray-300 cursor-not-allowed'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'"
+                  >
+                    다음 <ChevronRight class="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
           </div><!-- /indicators -->
 
         </div><!-- /main -->
       </div>
     </main>
-
     <AppFooter />
   </div>
 </template>

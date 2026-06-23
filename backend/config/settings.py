@@ -106,6 +106,9 @@ CLOVA_OCR_SECRET     = os.environ.get('CLOVA_OCR_SECRET', '')
 GMS_KEY   = os.environ.get('GMS_KEY', '')
 GMS_MODEL = os.environ.get('GMS_MODEL', 'gemini-2.5-flash')
 
+# YouTube Data API v3
+YOUTUBE_API_KEY = os.environ.get('YOUTUBE_API_KEY', '')
+
 # 보이스피싱 탐지 모델 서버 (FastAPI)
 MODEL_SERVER_URL = os.environ.get('MODEL_SERVER_URL', 'http://localhost:8001')
 

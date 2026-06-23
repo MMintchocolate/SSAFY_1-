@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from .models import News
-from .crawler import crawl_news, CRAWL_KEYWORDS
+from .crawler import crawl_news, CRAWL_KEYWORDS, _fetch_news_api, _strip_html
 from .cluster import run_clustering
 
 _GMS_URL = (
@@ -18,10 +18,16 @@ _GMS_URL = (
 
 @api_view(['POST'])
 def crawl(request):
-    """유출/해킹 키워드로 네이버 뉴스 100건씩 크롤링."""
+    """키워드 목록으로 네이버 뉴스 크롤링. body에 keywords 없으면 기본값 사용."""
+    raw = request.data.get('keywords')
+    if raw and isinstance(raw, list):
+        keywords = [k.strip() for k in raw if isinstance(k, str) and k.strip()][:3]
+    else:
+        keywords = list(CRAWL_KEYWORDS)
+
     try:
         results = {}
-        for keyword in CRAWL_KEYWORDS:
+        for keyword in keywords:
             results[keyword] = crawl_news(keyword)
         return Response({'success': True, 'saved': results})
     except Exception as e:
@@ -120,6 +126,34 @@ def summarize(request, pk):
 
 
 @api_view(['GET'])
+def stock_news(request):
+    """
+    GET /api/news/stock/?q=삼성전자&display=10
+    종목 이름으로 네이버 뉴스 실시간 검색 (DB 저장 없음)
+    """
+    q       = request.query_params.get('q', '').strip()
+    display = min(int(request.query_params.get('display', 10)), 30)
+
+    if not q:
+        return Response({'error': 'q 파라미터가 필요합니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        items = _fetch_news_api(q, display=display)
+        data  = [
+            {
+                'title':       _strip_html(item.get('title', '')),
+                'url':         item.get('link', ''),
+                'description': _strip_html(item.get('description', '')),
+                'pub_date':    item.get('pubDate', ''),
+            }
+            for item in items
+        ]
+        return Response({'query': q, 'results': data})
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
 def top3_news(request):
     """홈페이지용 키워드별 최신 뉴스 Top 3."""
     def _serialize(n):
@@ -142,9 +176,9 @@ def top3_news(request):
 
 @api_view(['GET'])
 def news_stats(request):
-    """키워드별 저장 건수 반환."""
-    stats = {}
-    for kw in CRAWL_KEYWORDS:
-        stats[kw] = News.objects.filter(keyword=kw).count()
+    """키워드별 저장 건수. ?keywords=유출,해킹,주식 으로 동적 지정 가능."""
+    raw = request.query_params.get('keywords', '')
+    keywords = [k.strip() for k in raw.split(',') if k.strip()] if raw else list(CRAWL_KEYWORDS)
+    stats = {kw: News.objects.filter(keyword=kw).count() for kw in keywords}
     stats['total'] = News.objects.count()
     return Response(stats)

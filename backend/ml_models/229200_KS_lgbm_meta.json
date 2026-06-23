@@ -1,0 +1,56 @@
+{
+  "symbol": "229200.KS",
+  "yf_ticker": "229200.KS",
+  "trained_at": "2026-06-23 11:20",
+  "total_rows": 1036,
+  "train_rows": 828,
+  "test_rows": 208,
+  "accuracy": 0.3029,
+  "class_dist": {
+    "0": 543,
+    "1": 117,
+    "2": 376
+  },
+  "feat_imp": [
+    {
+      "feature": "feat_macd_hist",
+      "importance": 347
+    },
+    {
+      "feature": "feat_ma_ratio",
+      "importance": 323
+    },
+    {
+      "feature": "feat_return_1d",
+      "importance": 294
+    },
+    {
+      "feature": "feat_return_5d",
+      "importance": 279
+    },
+    {
+      "feature": "feat_bb_pos",
+      "importance": 251
+    },
+    {
+      "feature": "feat_vol_ratio",
+      "importance": 205
+    },
+    {
+      "feature": "feat_us_10y_chg",
+      "importance": 202
+    },
+    {
+      "feature": "feat_usd_idx_chg",
+      "importance": 192
+    },
+    {
+      "feature": "feat_rsi",
+      "importance": 187
+    },
+    {
+      "feature": "feat_return_3d",
+      "importance": 83
+    }
+  ]
+}

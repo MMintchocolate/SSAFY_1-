@@ -7,7 +7,7 @@ import requests
 from bs4 import BeautifulSoup
 from django.conf import settings
 
-CRAWL_KEYWORDS = ['유출', '해킹']
+CRAWL_KEYWORDS = ['유출', '해킹', '주식']
 _HEADERS = {
     'User-Agent': (
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '

@@ -1,0 +1,56 @@
+{
+  "symbol": "LLY",
+  "yf_ticker": "LLY",
+  "trained_at": "2026-06-23 11:21",
+  "total_rows": 1091,
+  "train_rows": 872,
+  "test_rows": 219,
+  "accuracy": 0.4201,
+  "class_dist": {
+    "0": 532,
+    "1": 198,
+    "2": 361
+  },
+  "feat_imp": [
+    {
+      "feature": "feat_ma_ratio",
+      "importance": 553
+    },
+    {
+      "feature": "feat_rsi",
+      "importance": 317
+    },
+    {
+      "feature": "feat_vol_ratio",
+      "importance": 266
+    },
+    {
+      "feature": "feat_macd_hist",
+      "importance": 258
+    },
+    {
+      "feature": "feat_return_3d",
+      "importance": 223
+    },
+    {
+      "feature": "feat_bb_pos",
+      "importance": 204
+    },
+    {
+      "feature": "feat_us_10y_chg",
+      "importance": 187
+    },
+    {
+      "feature": "feat_return_5d",
+      "importance": 178
+    },
+    {
+      "feature": "feat_usd_idx_chg",
+      "importance": 170
+    },
+    {
+      "feature": "feat_return_1d",
+      "importance": 159
+    }
+  ]
+}

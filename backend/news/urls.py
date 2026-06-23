@@ -6,6 +6,7 @@ urlpatterns = [
     path('cluster/',            views.cluster,    name='news-cluster'),
     path('stats/',              views.news_stats, name='news-stats'),
     path('top3/',               views.top3_news,  name='news-top3'),
+    path('stock/',              views.stock_news, name='news-stock'),
     path('<int:pk>/summarize/', views.summarize,  name='news-summarize'),
     path('',                    views.news_list,  name='news-list'),
 ]

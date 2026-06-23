@@ -1,21 +1,22 @@
+import html
 import FinanceDataReader as fdr
 import httpx
+import io
 import math
+import numpy as np
 import re
 import yfinance as yf
-from pathlib import Path
 from datetime import datetime, timedelta
+from googleapiclient.discovery import build
 
 from django.conf import settings
-from dotenv import load_dotenv
+from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
 from .models import WatchlistItem
-
-load_dotenv(Path(__file__).parent.parent / '.env')
 
 VALID_PERIODS = {'1mo', '3mo', '6mo', '1y', '2y', '5y'}
 PERIOD_DAYS   = {'1mo': 30, '3mo': 90, '6mo': 180, '1y': 365, '2y': 730, '5y': 1825}
@@ -432,6 +433,273 @@ def stock_indicators(request, symbol):
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+_GOLD_PERIOD_DAYS = {'1D': 1, '1W': 7, '1M': 30, '3M': 90, '6M': 180, '1Y': 365}
+_GOLD_URL = 'https://www.koreagoldx.co.kr/api/price/chart/list'
+_GOLD_HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+    'Referer': 'https://www.koreagoldx.co.kr/',
+}
+# API 응답 필드 → 프론트 키 매핑
+_METAL_FIELD = {
+    'pure':   ('s_pure',   'p_pure'),   # 순금 24K  매도/매입
+    '18k':    ('s_18k',    'p_18k'),
+    '14k':    ('s_14k',    'p_14k'),
+    'white':  ('s_white',  'p_white'),  # 백금
+    'silver': ('s_silver', 'p_silver'), # 은
+}
+
+
+@api_view(['GET'])
+def gold_price(request):
+    """
+    GET /api/stocks/gold/?period=3M&metal=pure
+    period: 1D | 1W | 1M | 3M | 6M | 1Y  (기본 3M)
+    metal:  pure | 18k | 14k | white | silver  (기본 pure)
+    """
+    period = request.query_params.get('period', '3M').upper()
+    metal  = request.query_params.get('metal', 'pure').lower()
+
+    if period not in _GOLD_PERIOD_DAYS:
+        period = '3M'
+    if metal not in _METAL_FIELD:
+        metal = 'pure'
+
+    days  = _GOLD_PERIOD_DAYS[period]
+    end   = datetime.today()
+    start = end - timedelta(days=days)
+
+    try:
+        res = httpx.post(_GOLD_URL, json={
+            'srchDt':       period,
+            'type':         'Au',
+            'dataDateStart': start.strftime('%Y.%m.%d'),
+            'dataDateEnd':   end.strftime('%Y.%m.%d'),
+        }, headers=_GOLD_HEADERS, timeout=10)
+        res.raise_for_status()
+
+        sell_key, buy_key = _METAL_FIELD[metal]
+        rows = res.json().get('list', [])
+        data = sorted(
+            [
+                {
+                    'date': row['date'],
+                    'sell': row.get(sell_key),   # 매도가 (살 때)
+                    'buy':  row.get(buy_key),    # 매입가 (팔 때)
+                }
+                for row in rows
+                if row.get(sell_key) and row.get(buy_key)
+            ],
+            key=lambda x: x['date'],  # 오름차순: 과거 → 최신
+        )
+        return Response({'metal': metal, 'period': period, 'data': data})
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ── ML 데이터셋 ────────────────────────────────────────────────────────
+_ML_SCRIPT = '''\
+#!/usr/bin/env python3
+"""
+삼성전자 매수/매도/관망 타이밍 예측 데이터셋 생성 스크립트
+Triple Barrier Method 적용 | 기간: 최근 5년 일별 데이터
+"""
+import yfinance as yf
+import pandas as pd
+import numpy as np
+from datetime import datetime, timedelta
+
+# ── 1. 데이터 수집 ───────────────────────────────────────────────────
+end   = datetime.today()
+start = end - timedelta(days=5 * 365 + 60)  # 롤링 여유분 포함
+
+print("데이터 수집 중...")
+samsung = yf.download("005930.KS", start=start, end=end, auto_adjust=True, progress=False)
+dxy     = yf.download("DX-Y.NYB",  start=start, end=end, auto_adjust=True, progress=False)
+tnx     = yf.download("^TNX",      start=start, end=end, auto_adjust=True, progress=False)
+
+# MultiIndex 처리 (yfinance 최신 버전 대응)
+def get_close(df, ticker):
+    if isinstance(df.columns, pd.MultiIndex):
+        return df["Close"][ticker]
+    return df["Close"]
+
+def get_ohlcv(df, ticker):
+    if isinstance(df.columns, pd.MultiIndex):
+        d = df.xs(ticker, axis=1, level=1)
+    else:
+        d = df
+    return d[["Open","High","Low","Close","Volume"]]
+
+# ── 2. 병합 (결측치 ffill) ──────────────────────────────────────────
+base = get_ohlcv(samsung, "005930.KS").copy()
+base = base.join(get_close(dxy, "DX-Y.NYB").rename("DXY"), how="left")
+base = base.join(get_close(tnx, "^TNX").rename("TNX"),    how="left")
+base["DXY"] = base["DXY"].ffill()
+base["TNX"] = base["TNX"].ffill()
+
+# ── 3. 피처 엔지니어링 ──────────────────────────────────────────────
+close = base["Close"]
+
+# 이동평균 비율 (장기 추세 정배열 여부)
+base["feat_ma_ratio"]    = close.rolling(50).mean() / close.rolling(200).mean()
+
+# RSI (14일)
+delta = close.diff()
+gain  = delta.clip(lower=0).rolling(14).mean()
+loss  = (-delta.clip(upper=0)).rolling(14).mean()
+base["feat_rsi"]         = 100 - (100 / (1 + gain / loss))
+
+# MACD 히스토그램
+ema12  = close.ewm(span=12, adjust=False).mean()
+ema26  = close.ewm(span=26, adjust=False).mean()
+macd   = ema12 - ema26
+signal = macd.ewm(span=9, adjust=False).mean()
+base["feat_macd_hist"]   = macd - signal
+
+# 볼린저 밴드 내 위치 (0%=하단, 100%=상단)
+bb_mid   = close.rolling(20).mean()
+bb_std   = close.rolling(20).std()
+bb_upper = bb_mid + 2 * bb_std
+bb_lower = bb_mid - 2 * bb_std
+base["feat_bb_pos"]      = (close - bb_lower) / (bb_upper - bb_lower) * 100
+
+# 가격 모멘텀 (수익률 %)
+base["feat_return_1d"]   = close.pct_change(1) * 100
+base["feat_return_3d"]   = close.pct_change(3) * 100
+base["feat_return_5d"]   = close.pct_change(5) * 100
+
+# 거래량 비율 (당일 / 5일 평균)
+base["feat_vol_ratio"]   = base["Volume"] / base["Volume"].rolling(5).mean()
+
+# 거시경제 변동률
+base["feat_usd_idx_chg"] = base["DXY"].pct_change(1) * 100
+base["feat_us_10y_chg"]  = base["TNX"].pct_change(1) * 100
+
+# ── 4. Triple Barrier Method ─────────────────────────────────────────
+TAKE_PROFIT = 0.02   # +2% 익절
+STOP_LOSS   = -0.01  # -1% 손절
+TIME_LIMIT  = 5      # 5영업일
+
+print("Triple Barrier 레이블링 중...")
+closes = close.values
+labels = []
+
+for i in range(len(closes)):
+    if i + TIME_LIMIT >= len(closes):
+        labels.append(np.nan)
+        continue
+    entry = closes[i]
+    label = 0  # 관망(타임아웃)
+    for j in range(1, TIME_LIMIT + 1):
+        ret = (closes[i + j] - entry) / entry
+        if ret >= TAKE_PROFIT:
+            label = 1; break   # 매수
+        elif ret <= STOP_LOSS:
+            label = 2; break   # 매도/보류
+    labels.append(label)
+
+base["label"] = labels
+
+# ── 5. 정제 및 저장 ──────────────────────────────────────────────────
+feat_cols = [c for c in base.columns if c.startswith("feat_")]
+df_final  = base[feat_cols + ["label"]].dropna()
+df_final["label"] = df_final["label"].astype(int)
+
+df_final.to_csv("samsung_dataset_5y.csv")
+print(f"\\n저장 완료: samsung_dataset_5y.csv")
+print(f"총 행 수: {len(df_final):,}개")
+print("\\n클래스별 분포:")
+dist = df_final["label"].value_counts().sort_index()
+dist.index = dist.index.map({0: "0 (관망)", 1: "1 (매수)", 2: "2 (매도/보류)"})
+print(dist)
+'''
+
+
+@api_view(['GET'])
+def ml_download_script(request):
+    """데이터셋 생성 Python 스크립트 다운로드"""
+    res = HttpResponse(_ML_SCRIPT, content_type='text/x-python; charset=utf-8')
+    res['Content-Disposition'] = 'attachment; filename="samsung_dataset_builder.py"'
+    return res
+
+
+@api_view(['POST'])
+def ml_generate_dataset(request):
+    """데이터셋 생성 후 CSV 반환 (서버에서 직접 계산)"""
+    try:
+        end   = datetime.today()
+        start = end - timedelta(days=5 * 365 + 60)
+
+        import pandas as pd
+
+        def _get_close(df, ticker):
+            if isinstance(df.columns, pd.MultiIndex):
+                return df['Close'][ticker]
+            return df['Close']
+
+        def _get_ohlcv(df, ticker):
+            if isinstance(df.columns, pd.MultiIndex):
+                d = df.xs(ticker, axis=1, level=1)
+            else:
+                d = df
+            return d[['Open', 'High', 'Low', 'Close', 'Volume']]
+
+        samsung = yf.download('005930.KS', start=start, end=end, auto_adjust=True, progress=False)
+        dxy     = yf.download('DX-Y.NYB',  start=start, end=end, auto_adjust=True, progress=False)
+        tnx     = yf.download('^TNX',      start=start, end=end, auto_adjust=True, progress=False)
+
+        base = _get_ohlcv(samsung, '005930.KS').copy()
+        base = base.join(_get_close(dxy, 'DX-Y.NYB').rename('DXY'), how='left')
+        base = base.join(_get_close(tnx, '^TNX').rename('TNX'),     how='left')
+        base['DXY'] = base['DXY'].ffill()
+        base['TNX'] = base['TNX'].ffill()
+
+        close = base['Close']
+        base['feat_ma_ratio']    = close.rolling(50).mean() / close.rolling(200).mean()
+        delta = close.diff()
+        gain  = delta.clip(lower=0).rolling(14).mean()
+        loss  = (-delta.clip(upper=0)).rolling(14).mean()
+        base['feat_rsi']         = 100 - (100 / (1 + gain / loss))
+        ema12  = close.ewm(span=12, adjust=False).mean()
+        ema26  = close.ewm(span=26, adjust=False).mean()
+        macd   = ema12 - ema26
+        base['feat_macd_hist']   = macd - macd.ewm(span=9, adjust=False).mean()
+        bb_mid   = close.rolling(20).mean()
+        bb_std   = close.rolling(20).std()
+        base['feat_bb_pos']      = (close - (bb_mid - 2*bb_std)) / (4*bb_std) * 100
+        base['feat_return_1d']   = close.pct_change(1) * 100
+        base['feat_return_3d']   = close.pct_change(3) * 100
+        base['feat_return_5d']   = close.pct_change(5) * 100
+        base['feat_vol_ratio']   = base['Volume'] / base['Volume'].rolling(5).mean()
+        base['feat_usd_idx_chg'] = base['DXY'].pct_change(1) * 100
+        base['feat_us_10y_chg']  = base['TNX'].pct_change(1) * 100
+
+        closes = close.values
+        labels = []
+        for i in range(len(closes)):
+            if i + 5 >= len(closes):
+                labels.append(np.nan); continue
+            entry = closes[i]; label = 0
+            for j in range(1, 6):
+                ret = (closes[i+j] - entry) / entry
+                if ret >= 0.02:   label = 1; break
+                elif ret <= -0.01: label = 2; break
+            labels.append(label)
+        base['label'] = labels
+
+        feat_cols = [c for c in base.columns if c.startswith('feat_')]
+        df_final  = base[feat_cols + ['label']].dropna()
+        df_final['label'] = df_final['label'].astype(int)
+
+        buf = io.StringIO()
+        df_final.to_csv(buf)
+        res = HttpResponse(buf.getvalue(), content_type='text/csv; charset=utf-8')
+        res['Content-Disposition'] = 'attachment; filename="samsung_dataset_5y.csv"'
+        return res
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def watchlist(request):
@@ -460,3 +728,58 @@ def watchlist_delete(request, symbol):
     if not deleted:
         return Response({'error': '관심 종목에 없습니다'}, status=status.HTTP_404_NOT_FOUND)
     return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['GET'])
+def receive_stock_name(request):
+    """
+    GET /api/stocks/stock-name/?stock_name=삼성전자
+    프론트에서 선택한 종목 이름을 받는 엔드포인트
+    """
+    stock_name = request.query_params.get('stock_name', '').strip()
+    if not stock_name:
+        return Response({'error': 'stock_name 파라미터가 필요합니다.'}, status=status.HTTP_400_BAD_REQUEST)
+    # print(stock_name)
+    youtube = build('youtube', 'v3', developerKey=settings.YOUTUBE_API_KEY)
+
+    # "stock_name 주가 전망" 검색 요청
+    request = youtube.search().list(
+        q=stock_name + "주가 전망",
+        part="snippet",
+        type="video",
+        maxResults=10,
+        order="viewCount" # 조회수 높은 순
+    )
+    response = request.execute()
+    refined_videos = []
+    for item in response.get('items', []):
+        video_id = item['id']['videoId']
+        
+        # html.unescape로 &quot; 등을 원래 특수문자로 복원
+        raw_title = item['snippet']['title']
+        clean_title = html.unescape(raw_title)
+        
+        # 썸네일은 보편적으로 쓰이는 medium(중형) 사이즈를 기본으로 채택
+        thumbnail_url = item['snippet']['thumbnails']['medium']['url']
+        
+        # 구조화하여 리스트에 추가
+        refined_videos.append({
+            "title": clean_title,
+            "video_id": video_id,
+            "url": f"https://youtu.be/{video_id}",
+            "thumbnail_url": thumbnail_url
+        })
+
+    # 결과 파싱
+    # for item in response['items']:
+    #     title = item['snippet']['title']
+    #     video_id = item['id']['videoId']
+        # print(f"제목: {title} / 링크: https://youtu.be/{video_id}")
+    
+    response_data = {
+        "status": "success",
+        "count": len(refined_videos),
+        "videos": refined_videos
+    }
+    
+    return Response(response_data, status=status.HTTP_200_OK)

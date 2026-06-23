@@ -1,0 +1,56 @@
+{
+  "symbol": "TSLA",
+  "yf_ticker": "TSLA",
+  "trained_at": "2026-06-23 10:36",
+  "total_rows": 1091,
+  "train_rows": 872,
+  "test_rows": 219,
+  "accuracy": 0.3196,
+  "class_dist": {
+    "0": 150,
+    "1": 359,
+    "2": 582
+  },
+  "feat_imp": [
+    {
+      "feature": "feat_ma_ratio",
+      "importance": 496
+    },
+    {
+      "feature": "feat_rsi",
+      "importance": 328
+    },
+    {
+      "feature": "feat_macd_hist",
+      "importance": 285
+    },
+    {
+      "feature": "feat_bb_pos",
+      "importance": 246
+    },
+    {
+      "feature": "feat_vol_ratio",
+      "importance": 241
+    },
+    {
+      "feature": "feat_return_3d",
+      "importance": 205
+    },
+    {
+      "feature": "feat_usd_idx_chg",
+      "importance": 178
+    },
+    {
+      "feature": "feat_return_1d",
+      "importance": 172
+    },
+    {
+      "feature": "feat_return_5d",
+      "importance": 168
+    },
+    {
+      "feature": "feat_us_10y_chg",
+      "importance": 122
+    }
+  ]
+}

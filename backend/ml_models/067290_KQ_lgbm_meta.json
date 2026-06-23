@@ -1,0 +1,56 @@
+{
+  "symbol": "067290.KQ",
+  "yf_ticker": "067290.KQ",
+  "trained_at": "2026-06-23 11:18",
+  "total_rows": 1056,
+  "train_rows": 844,
+  "test_rows": 212,
+  "accuracy": 0.533,
+  "class_dist": {
+    "0": 404,
+    "1": 167,
+    "2": 485
+  },
+  "feat_imp": [
+    {
+      "feature": "feat_ma_ratio",
+      "importance": 586
+    },
+    {
+      "feature": "feat_rsi",
+      "importance": 288
+    },
+    {
+      "feature": "feat_macd_hist",
+      "importance": 238
+    },
+    {
+      "feature": "feat_return_3d",
+      "importance": 236
+    },
+    {
+      "feature": "feat_return_5d",
+      "importance": 198
+    },
+    {
+      "feature": "feat_return_1d",
+      "importance": 195
+    },
+    {
+      "feature": "feat_us_10y_chg",
+      "importance": 191
+    },
+    {
+      "feature": "feat_usd_idx_chg",
+      "importance": 184
+    },
+    {
+      "feature": "feat_vol_ratio",
+      "importance": 170
+    },
+    {
+      "feature": "feat_bb_pos",
+      "importance": 105
+    }
+  ]
+}
