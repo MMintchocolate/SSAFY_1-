@@ -10,6 +10,11 @@ const router = createRouter({
       meta: { layout: 'blank' },
     },
     {
+      path: '/intro',
+      component: () => import('@/views/IntroView.vue'),
+      meta: { layout: 'blank' },
+    },
+    {
       path: '/login',
       component: () => import('@/views/LoginView.vue'),
       meta: { layout: 'blank' },
