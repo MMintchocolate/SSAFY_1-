@@ -160,6 +160,7 @@ function goStart() {
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@900&display=swap');
 
 /* ─── 기본 ──────────────────────────────────────────────── */
 .page {
@@ -235,10 +236,11 @@ function goStart() {
 .build-letters { display: flex; gap: 1px; }
 .bltr {
   display: inline-block;
+  font-family: 'M PLUS Rounded 1c', 'Nunito', sans-serif;
   font-size: 54px;
   font-weight: 900;
   color: #1a1a2e;
-  letter-spacing: -1px;
+  letter-spacing: 0.02em;
   opacity: 0;
   transform: translateY(10px) scale(0.88);
   transition:
@@ -260,10 +262,11 @@ function goStart() {
 
 .compact-icon { width: 80px; }
 .compact-text {
+  font-family: 'M PLUS Rounded 1c', 'Nunito', sans-serif;
   font-size: 44px;
   font-weight: 900;
   color: #1a1a2e;
-  letter-spacing: -1px;
+  letter-spacing: 0.02em;
   line-height: 1;
 }
 

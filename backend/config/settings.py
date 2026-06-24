@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'spending',
     'news',
     'stocks',
+    'community',
 ]
 
 MIDDLEWARE = [

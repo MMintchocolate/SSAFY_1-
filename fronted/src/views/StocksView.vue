@@ -386,7 +386,7 @@ onUnmounted(() => {
               </div>
 
               <!-- Stats grid -->
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 p-4 bg-gray-50 rounded-xl">
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 p-4 bg-gray-50 rounded-xl">
                 <div>
                   <p class="text-xs text-gray-400 mb-0.5">시가총액</p>
                   <p class="font-bold text-gray-800 text-sm tabular-nums">{{ fmtCap(stockDetail.market_cap) }}</p>
@@ -409,6 +409,24 @@ onUnmounted(() => {
                     {{ fmtPrice(stockDetail.w52_low) }}
                   </p>
                 </div>
+              </div>
+
+              <!-- 빠른 이동 버튼 -->
+              <div class="flex gap-2 mb-5">
+                <RouterLink
+                  to="/indicators"
+                  class="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-colors shadow-sm"
+                >
+                  <TrendingUp class="w-3.5 h-3.5" />
+                  매수신호 보러가기
+                </RouterLink>
+                <RouterLink
+                  to="/dataset"
+                  class="flex items-center gap-1.5 px-4 py-2 bg-violet-600 text-white text-xs font-bold rounded-xl hover:bg-violet-700 transition-colors shadow-sm"
+                >
+                  <BarChart2 class="w-3.5 h-3.5" />
+                  ML 데이터 보러가기
+                </RouterLink>
               </div>
 
               <!-- Period selector + view toggle -->
@@ -665,8 +683,8 @@ onUnmounted(() => {
                     {{ item.symbol.slice(0, 4) }}
                   </div>
                   <div class="flex-1 min-w-0">
-                    <p class="font-bold text-gray-900 text-sm">{{ item.symbol }}</p>
-                    <p class="text-xs text-gray-500 truncate">{{ item.name }}</p>
+                    <p class="font-bold text-gray-900 text-sm">{{ item.name }}</p>
+                    <p class="text-xs text-gray-500 truncate">{{ item.symbol }}</p>
                   </div>
                   <button
                     @click.stop="toggleWatchlist(item.symbol, item.name)"

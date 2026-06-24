@@ -13,5 +13,6 @@ urlpatterns = [
     path('api/forms/',    include('docforms.urls')),
     path('api/spending/', include('spending.urls')),
     path('api/news/',    include('news.urls')),
-    path('api/stocks/',  include('stocks.urls')),
+    path('api/stocks/',     include('stocks.urls')),
+    path('api/community/', include('community.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

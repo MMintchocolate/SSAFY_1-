@@ -211,6 +211,7 @@ function goStart() {
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@900&display=swap');
 
 /* ─── 기본 ──────────────────────────────────────────────── */
 .page {
@@ -294,11 +295,12 @@ function goStart() {
 
 .lt {
   display: block;
+  font-family: 'M PLUS Rounded 1c', 'Nunito', sans-serif;
   font-size: clamp(80px, 14vw, 112px);
   font-weight: 900;
   line-height: 1.0;
   color: #c8d0e8;
-  letter-spacing: -2px;
+  letter-spacing: 0.02em;
   opacity: 0;
   transform: translateY(14px);
   /* 은은하게 천천히: 1.4s ease-out */

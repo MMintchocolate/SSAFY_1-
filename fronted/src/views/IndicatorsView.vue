@@ -189,8 +189,8 @@ onMounted(loadWatchlist)
                   {{ item.symbol.slice(0, 3) }}
                 </div>
                 <div class="min-w-0">
-                  <p class="text-xs font-bold text-gray-900 truncate">{{ item.symbol }}</p>
-                  <p class="text-xs text-gray-400 truncate">{{ item.name }}</p>
+                  <p class="text-xs font-bold text-gray-900 truncate">{{ item.name }}</p>
+                  <p class="text-xs text-gray-400 truncate">{{ item.symbol }}</p>
                 </div>
               </button>
             </div>
@@ -230,8 +230,8 @@ onMounted(loadWatchlist)
                 {{ selected.symbol.slice(0, 4) }}
               </div>
               <div>
-                <p class="text-xs text-gray-400">{{ selected.symbol }}</p>
-                <p class="text-lg font-extrabold text-gray-900">{{ selected.name }}</p>
+                <p class="text-xs text-gray-400">{{ selected.name }}</p>
+                <p class="text-lg font-extrabold text-gray-900">{{ selected.symbol }}</p>
               </div>
               <div class="ml-auto text-right">
                 <p class="text-xs text-gray-400 mb-0.5">현재가</p>

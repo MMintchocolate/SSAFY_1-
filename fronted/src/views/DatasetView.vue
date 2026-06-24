@@ -267,8 +267,8 @@ function isExtra(sym) {
             <div class="flex items-start justify-between px-4 pt-4 pb-3">
               <div>
                 <div class="flex items-center gap-2 flex-wrap">
-                  <span class="font-black text-gray-900">{{ item.symbol }}</span>
-                  <span v-if="item.name" class="text-xs text-gray-400 truncate max-w-32">{{ item.name }}</span>
+                  <span class="font-black text-gray-900">{{ item.name }}</span>
+                  <span v-if="item.name" class="text-xs text-gray-400 truncate max-w-32">{{ item.symbol }}</span>
                 </div>
                 <div v-if="modelMetas[item.symbol]?.trained" class="flex items-center gap-1.5 mt-1">
                   <CheckCircle class="w-3 h-3 text-emerald-500" />
