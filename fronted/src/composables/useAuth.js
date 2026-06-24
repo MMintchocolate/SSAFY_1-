@@ -47,6 +47,17 @@ export function useAuth() {
     _save(data)
   }
 
+  async function googleLogin(credential) {
+    const res = await fetch('/api/accounts/google/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw data
+    _save(data)
+  }
+
   async function logout() {
     if (refreshToken.value) {
       await fetch('/api/accounts/logout/', {
@@ -55,6 +66,7 @@ export function useAuth() {
         body: JSON.stringify({ refresh: refreshToken.value }),
       }).catch(() => {})
     }
+    window.google?.accounts?.id?.disableAutoSelect()
     _clear()
   }
 
@@ -91,5 +103,5 @@ export function useAuth() {
     return res
   }
 
-  return { user, isLoggedIn, accessToken, login, register, logout, authFetch }
+  return { user, isLoggedIn, accessToken, login, googleLogin, register, logout, authFetch }
 }

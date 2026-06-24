@@ -1,588 +1,815 @@
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { Line } from 'vue-chartjs'
+// @ts-nocheck
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { Line } from "vue-chartjs";
 import {
   Chart as ChartJS,
-  CategoryScale, LinearScale, PointElement, LineElement,
-  Title, Tooltip, Legend, Filler,
-} from 'chart.js'
-import NavBar from '@/components/NavBar.vue'
-import AppFooter from '@/components/AppFooter.vue'
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+} from "chart.js";
+import NavBar from "@/components/NavBar.vue";
+import AppFooter from "@/components/AppFooter.vue";
 import {
-  ShieldCheck, TrendingUp, TrendingDown, MapPin, Receipt, PhoneOff,
-  ChartBarBig, Users, ArrowRight, Newspaper, ExternalLink,
-  Zap, AlertTriangle, Loader2, Flame, BarChart2,
-} from '@lucide/vue'
+  TrendingUp,
+  MapPin,
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  Star,
+  Search,
+  Loader2,
+  Newspaper,
+} from "@lucide/vue";
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
-// ─── 서비스 메뉴 ──────────────────────────────────────────────────────────────
-const services = [
-  { to: '/products',     icon: TrendingUp,  label: '금융상품',    desc: '예·적금 금리 비교',   color: 'bg-blue-50',    iconColor: 'text-blue-600',    border: 'border-blue-100' },
-  { to: '/branches',     icon: MapPin,       label: '지점찾기',    desc: '인근 금융기관 검색',   color: 'bg-emerald-50', iconColor: 'text-emerald-600', border: 'border-emerald-100' },
-  { to: '/receipts',     icon: Receipt,      label: '영수증 장부', desc: 'AI 자동 지출 분류',   color: 'bg-purple-50',  iconColor: 'text-purple-600',  border: 'border-purple-100' },
-  { to: '/voicephishing',icon: PhoneOff,     label: '피싱탐지',    desc: '보이스피싱 AI 분석',   color: 'bg-red-50',     iconColor: 'text-red-600',     border: 'border-red-100' },
-  { to: '/spending',     icon: ChartBarBig,  label: '지출분석',    desc: 'CSV 소비 시각화',     color: 'bg-violet-50',  iconColor: 'text-violet-600',  border: 'border-violet-100' },
-  { to: '/community',    icon: Users,        label: '커뮤니티',    desc: '피싱 제보·금융 팁',    color: 'bg-orange-50',  iconColor: 'text-orange-600',  border: 'border-orange-100' },
-]
+// ─── 주요 기능 카드 ───────────────────────────────────────────────────────────
+const features = [
+  {
+    to: "/app/products",
+    title: "금융상품 비교",
+    desc: "다양한 금융상품을 한눈에 비교해보세요",
+    icon: Search,
+    bg: "#DFFAF4",
+    iconColor: "#0D9B7A",
+  },
+  {
+    to: "/app/products",
+    title: "맞춤형 금융 추천",
+    desc: "AI가 분석한 맞춤형 금융상품을 추천해드려요",
+    icon: Star,
+    bg: "#FFF8E6",
+    iconColor: "#B8860B",
+  },
+  {
+    to: "/app/stocks",
+    title: "실시간 주식 정보",
+    desc: "국내외 주식 정보를 실시간으로 확인할 수 있어요",
+    icon: TrendingUp,
+    bg: "#EEF1F5",
+    iconColor: "#3B4FD8",
+  },
+  {
+    to: "/app/branches",
+    title: "은행 및 ATM 찾기",
+    desc: "내 주변 은행과 ATM 위치를 쉽게 찾아보세요",
+    icon: MapPin,
+    bg: "#F5F0FF",
+    iconColor: "#7C3AED",
+  },
+];
 
-// ─── Top3 뉴스 ────────────────────────────────────────────────────────────────
-const top3        = ref({ 유출: [], 해킹: [] })
-const top3Loading = ref(true)
-const top3Error   = ref(false)
-
-const KEYWORDS = [
-  { key: '유출', label: '유출 뉴스', barColor: 'bg-orange-500', badgeClass: 'bg-orange-100 text-orange-700' },
-  { key: '해킹', label: '해킹 뉴스', barColor: 'bg-red-500',    badgeClass: 'bg-red-100 text-red-700' },
-]
-
-async function loadTop3() {
-  top3Loading.value = true
-  top3Error.value   = false
-  try {
-    const res = await fetch('/api/news/top3/')
-    if (!res.ok) throw new Error()
-    top3.value = await res.json()
-  } catch {
-    top3Error.value = true
-  } finally {
-    top3Loading.value = false
-  }
+// 우선주 등 로고가 없는 종목 → 모종목 코드로 대체
+const LOGO_CODE_MAP = { '005935': '005930' }
+function logoCode(symbol) {
+  const code = symbol.replace('.KS', '').replace('.KQ', '')
+  return LOGO_CODE_MAP[code] ?? code
 }
 
-const hasAnyNews = () => KEYWORDS.some(k => (top3.value[k.key] || []).length > 0)
+// ─── 실시간 주식 (시가총액 상위) ──────────────────────────────────────────────
+const movers = ref({ marcap: [], up: [], down: [] });
+const moversLoading = ref(true);
+const activeIdx = ref(0);
+let cycleTimer = null;
 
-function fmtDate(iso) {
-  if (!iso) return ''
-  return new Date(iso).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
-}
-
-const RANK_ICONS = ['🥇', '🥈', '🥉']
-
-// ─── 시장 현황 ────────────────────────────────────────────────────────────────
-const movers        = ref({ volume: [], up: [], down: [] })
-const moversLoading = ref(true)
-const activeIdx     = ref(0)
-const chartHistory  = ref([])
-const chartLoading  = ref(false)
-const historyCache  = new Map()
-let cycleTimer = null
-
-const allStocks = computed(() => [
-  ...movers.value.volume.map(s => ({ ...s, cat: 'volume' })),
-  ...movers.value.up.map(s    => ({ ...s, cat: 'up' })),
-  ...movers.value.down.map(s  => ({ ...s, cat: 'down' })),
-])
-const activeStock = computed(() => allStocks.value[activeIdx.value] ?? null)
-
-watch(activeIdx, async (idx) => {
-  const s = allStocks.value[idx]
-  if (!s) return
-  if (historyCache.has(s.symbol)) {
-    chartHistory.value = historyCache.get(s.symbol)
-    return
-  }
-  chartLoading.value = true
-  try {
-    const res  = await fetch(`/api/stocks/${s.symbol}/history/?period=1mo`)
-    const data = await res.json()
-    historyCache.set(s.symbol, Array.isArray(data) ? data : [])
-    chartHistory.value = historyCache.get(s.symbol)
-  } catch { chartHistory.value = [] }
-  finally  { chartLoading.value = false }
-})
+const topStocks = computed(() => movers.value.marcap.slice(0, 5));
+const activeStock = computed(() => topStocks.value[activeIdx.value] ?? null);
+const otherStocks = computed(() =>
+  topStocks.value
+    .map((s, i) => ({ ...s, rank: i }))
+    .filter((s) => s.rank !== activeIdx.value)
+);
 
 function startCycle() {
-  if (cycleTimer) clearInterval(cycleTimer)
+  if (cycleTimer) clearInterval(cycleTimer);
   cycleTimer = setInterval(() => {
-    if (!allStocks.value.length) return
-    activeIdx.value = (activeIdx.value + 1) % allStocks.value.length
-  }, 4000)
+    if (!topStocks.value.length) return;
+    activeIdx.value = (activeIdx.value + 1) % topStocks.value.length;
+  }, 5000);
 }
 
 async function loadMovers() {
-  moversLoading.value = true
+  moversLoading.value = true;
   try {
-    const res  = await fetch('/api/stocks/market-movers/')
-    movers.value = await res.json()
-  } catch { movers.value = { volume: [], up: [], down: [] } }
-  finally { moversLoading.value = false }
-  if (allStocks.value.length) {
-    activeIdx.value = 0
-    startCycle()
+    const res = await fetch("/api/stocks/market-movers/");
+    movers.value = await res.json();
+  } catch {
+    movers.value = { volume: [], up: [], down: [] };
+  } finally {
+    moversLoading.value = false;
+  }
+  if (topStocks.value.length) startCycle();
+}
+
+function prevStock() {
+  activeIdx.value =
+    (activeIdx.value - 1 + topStocks.value.length) % topStocks.value.length;
+  startCycle();
+}
+function nextStock() {
+  activeIdx.value = (activeIdx.value + 1) % topStocks.value.length;
+  startCycle();
+}
+
+// ─── 코스피 지수 차트 ─────────────────────────────────────────────────────────
+const indexData = ref(null);
+const kospiHistory = ref([]);
+const kospiPeriod = ref("1mo");
+const kospiLoading = ref(false);
+const kospiCache = new Map();
+
+const KOSPI_PERIODS = [
+  { label: "1일", value: "1d" },
+  { label: "1주", value: "1wk" },
+  { label: "1개월", value: "1mo" },
+  { label: "3개월", value: "3mo" },
+  { label: "1년", value: "1y" },
+];
+
+async function loadIndex() {
+  try {
+    const res = await fetch("/api/stocks/index/");
+    indexData.value = await res.json();
+    const hist = indexData.value?.kospi?.history;
+    if (hist?.length) {
+      kospiHistory.value = hist;
+      kospiCache.set("index", hist);
+    }
+  } catch {
+    indexData.value = null;
   }
 }
 
-function pickStock(s) {
-  const i = allStocks.value.findIndex(x => x.symbol === s.symbol)
-  if (i >= 0) activeIdx.value = i
-  startCycle()
+async function fetchKospiHistory(period) {
+  if (kospiCache.has(period)) {
+    kospiHistory.value = kospiCache.get(period);
+    return;
+  }
+  kospiLoading.value = true;
+  try {
+    const res = await fetch(`/api/stocks/%5EKS11/history/?period=${period}`);
+    const data = await res.json();
+    const list = Array.isArray(data) ? data : [];
+    if (list.length) {
+      kospiCache.set(period, list);
+      kospiHistory.value = list;
+    } else {
+      // 실패 시 index 데이터 fallback
+      const fallback = indexData.value?.kospi?.history;
+      if (fallback?.length) kospiHistory.value = fallback;
+    }
+  } catch {
+    const fallback = indexData.value?.kospi?.history;
+    if (fallback?.length) kospiHistory.value = fallback;
+  } finally {
+    kospiLoading.value = false;
+  }
 }
 
-const chartData = computed(() => {
-  const prices = chartHistory.value.map(d => d.close)
-  const labels = chartHistory.value.map(d => (d.date || '').slice(5))
-  const isUp   = prices.length >= 2 && prices[prices.length - 1] >= prices[0]
+watch(kospiPeriod, (period) => fetchKospiHistory(period));
+
+const kospiIsUp = computed(() => {
+  const p = kospiHistory.value.map((d) => d.close);
+  return p.length >= 2 && p[p.length - 1] >= p[0];
+});
+
+const kospiChartData = computed(() => {
+  const prices = kospiHistory.value.map((d) => d.close);
+  const labels = kospiHistory.value.map((d) => (d.date || "").slice(5));
   return {
     labels,
-    datasets: [{
-      label: activeStock.value?.name || '',
-      data: prices,
-      borderColor:     isUp ? '#22c55e' : '#ef4444',
-      backgroundColor: isUp ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-      borderWidth: 2,
-      pointRadius: 0,
-      tension: 0.3,
-      fill: true,
-    }],
-  }
-})
+    datasets: [
+      {
+        label: "KOSPI",
+        data: prices,
+        borderColor: kospiIsUp.value ? "#E5323B" : "#3B7FED",
+        backgroundColor: kospiIsUp.value
+          ? "rgba(229,50,59,0.07)"
+          : "rgba(59,127,237,0.07)",
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.3,
+        fill: true,
+      },
+    ],
+  };
+});
 
 const chartOpts = {
   responsive: true,
   maintainAspectRatio: false,
-  plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+  plugins: {
+    legend: { display: false },
+    tooltip: { mode: "index", intersect: false },
+  },
   scales: {
-    x: { grid: { display: false }, ticks: { maxTicksLimit: 5, font: { size: 10 } } },
-    y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 } } },
+    x: {
+      grid: { display: false },
+      ticks: { maxTicksLimit: 6, font: { size: 10 }, color: "#6F7485" },
+      border: { display: false },
+    },
+    y: {
+      grid: { color: "rgba(0,0,0,0.04)" },
+      ticks: { font: { size: 10 }, color: "#6F7485" },
+      border: { display: false },
+    },
   },
   animation: { duration: 300 },
-}
+};
 
-// ─── 코스피/코스닥 지수 ───────────────────────────────────────────────────────
-const indexData    = ref(null)
-const indexLoading = ref(false)
+// ─── 금융 뉴스 TOP3 ───────────────────────────────────────────────────────────
+const financialNews = ref([]);
+const newsLoading = ref(false);
+const NEWS_COLORS = ["#DFFAF4", "#FFF8E6", "#F0EDFF"];
 
-async function loadIndex() {
-  indexLoading.value = true
+async function loadFinancialNews() {
+  newsLoading.value = true;
   try {
-    const res = await fetch('/api/stocks/index/')
-    indexData.value = await res.json()
-  } catch { indexData.value = null }
-  finally { indexLoading.value = false }
-}
-
-function makeIndexChart(history = []) {
-  const prices = history.map(d => d.close)
-  const labels = history.map(d => (d.date || '').slice(5))
-  const isUp   = prices.length >= 2 && prices[prices.length - 1] >= prices[0]
-  return {
-    labels,
-    datasets: [{
-      data: prices,
-      borderColor:     isUp ? '#22c55e' : '#ef4444',
-      backgroundColor: isUp ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)',
-      borderWidth: 1.5,
-      pointRadius: 0,
-      tension: 0.3,
-      fill: true,
-    }],
+    const res = await fetch("/api/news/stock/?q=금융경제&display=3");
+    const data = await res.json();
+    financialNews.value = (data.results || []).slice(0, 3);
+  } catch {
+    financialNews.value = [];
+  } finally {
+    newsLoading.value = false;
   }
 }
 
-const kospiChart  = computed(() => makeIndexChart(indexData.value?.kospi?.history  ?? []))
-const kosdaqChart = computed(() => makeIndexChart(indexData.value?.kosdaq?.history ?? []))
-
-const indexChartOpts = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: { legend: { display: false }, tooltip: { enabled: false } },
-  scales: { x: { display: false }, y: { display: false } },
-  animation: false,
+function fmtPubDate(str) {
+  if (!str) return "";
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return str.slice(0, 10);
+  return d.toLocaleDateString("ko-KR", { month: "long", day: "numeric" });
 }
 
 onMounted(() => {
-  loadTop3()
-  loadMovers()
-  loadIndex()
-})
-
+  loadMovers();
+  loadIndex();
+  loadFinancialNews();
+});
 onUnmounted(() => {
-  if (cycleTimer) clearInterval(cycleTimer)
-})
+  if (cycleTimer) clearInterval(cycleTimer);
+});
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50">
+  <div
+    class="min-h-screen bg-white"
+    style="font-family: 'Pretendard', 'Noto Sans KR', sans-serif"
+  >
     <NavBar />
 
-    <!-- ─── 히어로 ──────────────────────────────────────────────────── -->
+    <!-- ═══════════════════════ HERO ═══════════════════════ -->
     <section
-      class="pt-16 min-h-[52vh] flex flex-col justify-center"
-      style="background: linear-gradient(135deg, #0f1f47 0%, #1e3a8a 50%, #2563eb 100%)"
+      class="relative overflow-hidden"
+      style="
+        padding-top: 64px;
+        min-height: 520px;
+        background: linear-gradient(
+          90deg,
+          #fffdf9 0%,
+          #ffffff 50%,
+          #f2fffb 100%
+        );
+      "
     >
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 text-white text-center">
-        <div class="inline-flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-full mb-6 uppercase tracking-widest border"
-          style="background:rgba(29,78,216,0.4);color:#93c5fd;border-color:rgba(59,130,246,0.4)"
-        >
-          <Zap class="w-3 h-3" />AI 금융보안 플랫폼
-        </div>
-        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight mb-5 tracking-tight">
-          내 자산을<br />
-          <span style="color:#93c5fd">보이스피싱</span>으로부터<br />
-          안전하게
-        </h1>
-        <p class="text-base sm:text-lg max-w-xl mx-auto mb-8 leading-relaxed" style="color:rgba(219,234,254,0.8)">
-          실시간 AI 탐지로 금융사기를 차단하고, 최신 보안 이슈를 한눈에 확인하세요.
-        </p>
-        <div class="flex flex-wrap justify-center gap-3">
-          <RouterLink to="/voicephishing"
-            class="flex items-center gap-2 px-6 py-3 bg-white font-bold rounded-xl text-sm shadow-lg hover:bg-blue-50 transition-all"
-            style="color:#1e3a8a"
+      <!-- 배경 glow blobs -->
+      <div
+        class="absolute pointer-events-none"
+        style="
+          right: 8%;
+          top: 8%;
+          width: 360px;
+          height: 360px;
+          background: rgba(87, 224, 195, 0.1);
+          border-radius: 50%;
+          filter: blur(70px);
+        "
+      ></div>
+      <div
+        class="absolute pointer-events-none"
+        style="
+          right: 3%;
+          bottom: 10%;
+          width: 220px;
+          height: 220px;
+          background: rgba(255, 215, 106, 0.13);
+          border-radius: 50%;
+          filter: blur(55px);
+        "
+      ></div>
+      <div
+        class="absolute pointer-events-none"
+        style="
+          left: 3%;
+          top: 25%;
+          width: 180px;
+          height: 180px;
+          background: rgba(87, 224, 195, 0.07);
+          border-radius: 50%;
+          filter: blur(45px);
+        "
+      ></div>
+      <!-- 왼쪽 노란 glow -->
+      <div
+        class="absolute pointer-events-none"
+        style="
+          left: 0%;
+          top: 5%;
+          width: 240px;
+          height: 240px;
+          background: rgba(255, 167, 38, 0.1);
+          border-radius: 50%;
+          filter: blur(60px);
+        "
+      ></div>
+      <div
+        class="absolute pointer-events-none"
+        style="
+          left: 5%;
+          bottom: 8%;
+          width: 140px;
+          height: 140px;
+          background: rgba(255, 215, 106, 0.12);
+          border-radius: 50%;
+          filter: blur(40px);
+        "
+      ></div>
+
+      <div
+        class="max-w-[1400px] mx-auto px-6 flex items-center gap-8"
+        style="min-height: 456px"
+      >
+        <!-- ── Left ── -->
+        <div class="flex-1 min-w-0 py-14">
+          <h1
+            class="font-extrabold leading-[1.15] mb-6"
+            style="
+              font-size: clamp(2rem, 3.6vw, 3rem);
+              color: #0f122b;
+              font-weight: 800;
+            "
           >
-            <ShieldCheck class="w-4 h-4" />피싱 탐지 시작
-          </RouterLink>
-          <RouterLink to="/news"
-            class="flex items-center gap-2 px-6 py-3 font-semibold rounded-xl border text-sm transition-all"
-            style="background:rgba(255,255,255,0.1);color:white;border-color:rgba(255,255,255,0.25)"
+            금융상품 <span style="color: #57e0c3">비교</span>부터<br />
+            <span style="color: #57e0c3">투자 정보</span>까지 한 번에
+          </h1>
+
+          <p
+            class="mb-9 leading-relaxed"
+            style="font-size: 1.05rem; color: #6f7485; max-width: 420px"
           >
-            <Newspaper class="w-4 h-4" />보안 뉴스 보기
-          </RouterLink>
-        </div>
-      </div>
-
-      <!-- 웨이브 -->
-      <svg viewBox="0 0 1440 56" fill="none" class="w-full block -mb-px">
-        <path d="M0,28 C360,56 720,0 1080,28 C1260,42 1380,14 1440,28 L1440,56 L0,56 Z" fill="#f8fafc"/>
-      </svg>
-    </section>
-
-    <!-- ─── 시장 현황 ──────────────────────────────────────────────────── -->
-    <section class="py-14 bg-slate-50">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6">
-
-        <div class="flex items-end justify-between mb-7">
-          <div>
-            <div class="flex items-center gap-2 mb-1">
-              <BarChart2 class="w-5 h-5 text-blue-600" />
-              <h2 class="text-xl font-black text-gray-900">시장 현황</h2>
-            </div>
-            <p class="text-sm text-gray-500">KRX 최신 거래일 기준 · 4초마다 자동 전환</p>
-          </div>
-          <RouterLink to="/stocks"
-            class="flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-800 transition-colors"
-          >
-            전체 보기 <ArrowRight class="w-4 h-4" />
-          </RouterLink>
-        </div>
-
-        <!-- 로딩 -->
-        <div v-if="moversLoading" class="flex justify-center py-16">
-          <Loader2 class="w-7 h-7 animate-spin text-blue-400" />
-        </div>
-
-        <!-- 콘텐츠: [거래량] [코스피] [상승] [하락] [자동차트] -->
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-
-          <!-- 거래량 TOP5 -->
-          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div class="flex items-center gap-1.5 px-3 py-2.5 bg-orange-50 border-b border-orange-100">
-              <Flame class="w-3.5 h-3.5 text-orange-500" />
-              <span class="text-xs font-black text-orange-700 tracking-wide">거래량 TOP</span>
-            </div>
-            <div class="divide-y divide-gray-50">
-              <button
-                v-for="(s, i) in movers.volume" :key="s.symbol"
-                @click="pickStock(s)"
-                class="w-full flex items-center gap-2 px-3 py-2.5 text-left transition-colors"
-                :class="activeStock?.symbol === s.symbol ? 'bg-orange-50' : 'hover:bg-gray-50'"
-              >
-                <span class="text-xs font-black w-3.5 flex-shrink-0 text-center"
-                  :class="i < 3 ? 'text-orange-400' : 'text-gray-300'">{{ i + 1 }}</span>
-                <span class="flex-1 text-xs font-semibold text-gray-900 truncate min-w-0">{{ s.name }}</span>
-                <span class="text-xs font-bold tabular-nums flex-shrink-0"
-                  :class="(s.change_pct ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-500'">
-                  {{ s.change_pct != null ? (s.change_pct >= 0 ? '+' : '') + s.change_pct.toFixed(1) + '%' : '-' }}
-                </span>
-              </button>
-            </div>
-          </div>
-
-          <!-- 코스피 지수 -->
-          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
-            <div class="px-3 py-2.5 border-b border-gray-100">
-              <p class="text-xs font-black text-gray-500 tracking-wide mb-0.5">KOSPI</p>
-              <template v-if="indexData?.kospi">
-                <p class="text-lg font-black tabular-nums leading-tight"
-                  :class="(indexData.kospi.change ?? 0) >= 0 ? 'text-gray-900' : 'text-gray-900'">
-                  {{ indexData.kospi.value.toLocaleString() }}
-                </p>
-                <p class="text-xs font-bold tabular-nums"
-                  :class="(indexData.kospi.change ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-500'">
-                  {{ (indexData.kospi.change >= 0 ? '+' : '') + indexData.kospi.change.toFixed(2) }}
-                  ({{ (indexData.kospi.change_pct >= 0 ? '+' : '') + indexData.kospi.change_pct.toFixed(2) }}%)
-                </p>
-              </template>
-              <div v-else class="flex items-center gap-1.5 py-1">
-                <Loader2 class="w-3.5 h-3.5 animate-spin text-gray-300" />
-                <span class="text-xs text-gray-400">로딩 중</span>
-              </div>
-            </div>
-            <!-- 미니 차트 -->
-            <div class="flex-1 px-1 py-2" style="min-height:110px">
-              <Line
-                v-if="indexData?.kospi?.history?.length"
-                :data="kospiChart"
-                :options="indexChartOpts"
-                style="height:100%;width:100%"
-              />
-            </div>
-            <!-- 코스닥 보조 표시 -->
-            <div v-if="indexData?.kosdaq" class="px-3 py-2 border-t border-gray-50 flex items-center justify-between">
-              <span class="text-xs text-gray-400 font-semibold">KOSDAQ</span>
-              <span class="text-xs font-bold tabular-nums"
-                :class="(indexData.kosdaq.change ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-500'">
-                {{ indexData.kosdaq.value.toLocaleString() }}
-                {{ (indexData.kosdaq.change_pct >= 0 ? '+' : '') + indexData.kosdaq.change_pct.toFixed(2) }}%
-              </span>
-            </div>
-          </div>
-
-          <!-- 상승 TOP5 -->
-          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div class="flex items-center gap-1.5 px-3 py-2.5 bg-emerald-50 border-b border-emerald-100">
-              <TrendingUp class="w-3.5 h-3.5 text-emerald-500" />
-              <span class="text-xs font-black text-emerald-700 tracking-wide">상승 TOP</span>
-            </div>
-            <div class="divide-y divide-gray-50">
-              <button
-                v-for="(s, i) in movers.up" :key="s.symbol"
-                @click="pickStock(s)"
-                class="w-full flex items-center gap-2 px-3 py-2.5 text-left transition-colors"
-                :class="activeStock?.symbol === s.symbol ? 'bg-emerald-50' : 'hover:bg-gray-50'"
-              >
-                <span class="text-xs font-black w-3.5 flex-shrink-0 text-center"
-                  :class="i < 3 ? 'text-emerald-500' : 'text-gray-300'">{{ i + 1 }}</span>
-                <span class="flex-1 text-xs font-semibold text-gray-900 truncate min-w-0">{{ s.name }}</span>
-                <span class="text-xs font-bold tabular-nums text-emerald-600 flex-shrink-0">
-                  {{ s.change_pct != null ? '+' + s.change_pct.toFixed(1) + '%' : '-' }}
-                </span>
-              </button>
-            </div>
-          </div>
-
-          <!-- 하락 TOP5 -->
-          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div class="flex items-center gap-1.5 px-3 py-2.5 bg-red-50 border-b border-red-100">
-              <TrendingDown class="w-3.5 h-3.5 text-red-400" />
-              <span class="text-xs font-black text-red-600 tracking-wide">하락 TOP</span>
-            </div>
-            <div class="divide-y divide-gray-50">
-              <button
-                v-for="(s, i) in movers.down" :key="s.symbol"
-                @click="pickStock(s)"
-                class="w-full flex items-center gap-2 px-3 py-2.5 text-left transition-colors"
-                :class="activeStock?.symbol === s.symbol ? 'bg-red-50' : 'hover:bg-gray-50'"
-              >
-                <span class="text-xs font-black w-3.5 flex-shrink-0 text-center"
-                  :class="i < 3 ? 'text-red-400' : 'text-gray-300'">{{ i + 1 }}</span>
-                <span class="flex-1 text-xs font-semibold text-gray-900 truncate min-w-0">{{ s.name }}</span>
-                <span class="text-xs font-bold tabular-nums text-red-500 flex-shrink-0">
-                  {{ s.change_pct != null ? s.change_pct.toFixed(1) + '%' : '-' }}
-                </span>
-              </button>
-            </div>
-          </div>
-
-          <!-- 자동전환 차트 -->
-          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col">
-
-            <!-- 현재 종목 정보 -->
-            <div v-if="activeStock" class="flex items-start justify-between mb-3">
-              <div class="min-w-0">
-                <p class="text-xs text-gray-400 font-medium truncate">{{ activeStock.symbol }}</p>
-                <p class="font-extrabold text-gray-900 text-base leading-tight truncate">{{ activeStock.name }}</p>
-              </div>
-              <div class="text-right flex-shrink-0 ml-3">
-                <p class="text-xl font-black text-gray-900 tabular-nums leading-tight">
-                  {{ activeStock.close != null ? Math.round(activeStock.close).toLocaleString() : '-' }}
-                </p>
-                <p class="text-sm font-bold tabular-nums"
-                  :class="(activeStock.change_pct ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-500'">
-                  {{ activeStock.change_pct != null
-                    ? (activeStock.change_pct >= 0 ? '+' : '') + activeStock.change_pct.toFixed(2) + '%'
-                    : '' }}
-                </p>
-              </div>
-            </div>
-
-            <!-- 차트 영역 -->
-            <div class="flex-1 relative" style="min-height: 180px">
-              <div v-if="chartLoading" class="absolute inset-0 flex items-center justify-center">
-                <Loader2 class="w-6 h-6 animate-spin text-gray-300" />
-              </div>
-              <Line
-                v-else-if="chartHistory.length > 0"
-                :data="chartData"
-                :options="chartOpts"
-                style="height:100%;width:100%"
-              />
-              <div v-else class="absolute inset-0 flex items-center justify-center text-xs text-gray-400">
-                차트 데이터 없음
-              </div>
-            </div>
-
-            <!-- 4초 진행바 -->
-            <div class="mt-4 h-0.5 bg-gray-100 rounded-full overflow-hidden">
-              <div :key="activeIdx" class="h-full rounded-full progress-bar"
-                :class="activeStock?.cat === 'up' ? 'bg-emerald-500'
-                       : activeStock?.cat === 'down' ? 'bg-red-400'
-                       : 'bg-orange-400'"
-              />
-            </div>
-
-            <!-- 카테고리 + 순서 표시 -->
-            <div class="flex items-center justify-between mt-2 text-xs text-gray-400">
-              <div class="flex gap-3">
-                <span :class="activeStock?.cat === 'volume' ? 'text-orange-500 font-bold' : ''">거래량</span>
-                <span :class="activeStock?.cat === 'up'     ? 'text-emerald-600 font-bold' : ''">상승</span>
-                <span :class="activeStock?.cat === 'down'   ? 'text-red-500 font-bold' : ''">하락</span>
-              </div>
-              <span class="tabular-nums">{{ (activeIdx % 5) + 1 }} / 5</span>
-            </div>
-
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ─── 이슈 뉴스 Top 3 ──────────────────────────────────────────── -->
-    <section class="py-14 bg-white border-t border-gray-100">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6">
-
-        <div class="flex items-end justify-between mb-7">
-          <div>
-            <div class="flex items-center gap-2 mb-1">
-              <Newspaper class="w-5 h-5 text-blue-600" />
-              <h2 class="text-xl font-black text-gray-900">최신 이슈 뉴스 Top 3</h2>
-            </div>
-            <p class="text-sm text-gray-500">유출·해킹 키워드 최신 보안 이슈 각 3건</p>
-          </div>
-          <RouterLink to="/news"
-            class="flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-800 transition-colors"
-          >
-            전체 보기 <ArrowRight class="w-4 h-4" />
-          </RouterLink>
-        </div>
-
-        <!-- 로딩 -->
-        <div v-if="top3Loading" class="flex justify-center py-16">
-          <Loader2 class="w-7 h-7 animate-spin text-blue-400" />
-        </div>
-
-        <!-- 오류 / 뉴스 없음 -->
-        <div v-else-if="top3Error || !hasAnyNews()"
-          class="flex flex-col items-center justify-center py-14 gap-3 bg-white rounded-2xl border border-dashed border-gray-200"
-        >
-          <Newspaper class="w-10 h-10 text-gray-300" />
-          <p class="text-sm text-gray-400">
-            {{ top3Error ? '뉴스를 불러올 수 없습니다.' : '아직 수집된 뉴스가 없습니다.' }}
+            나에게 맞는 금융상품을 찾고,<br />
+            투자 정보를 확인하며,<br />
+            자산을 효율적으로 관리하세요.
           </p>
-          <RouterLink to="/news" class="text-xs font-semibold text-blue-600 hover:underline">
-            보안뉴스 페이지에서 크롤링 시작하기 →
-          </RouterLink>
-        </div>
 
-        <!-- 키워드별 2열 -->
-        <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div v-for="kw in KEYWORDS" :key="kw.key">
-            <div class="flex items-center gap-2 mb-4">
-              <span class="w-3 h-3 rounded-full flex-shrink-0" :class="kw.barColor"></span>
-              <h3 class="font-bold text-gray-800">{{ kw.label }}</h3>
-              <span class="text-xs text-gray-400 ml-auto">최신순</span>
-            </div>
-
-            <div v-if="!(top3[kw.key] || []).length"
-              class="flex items-center justify-center h-32 bg-white rounded-xl border border-dashed border-gray-200 text-sm text-gray-400"
+          <div class="flex items-center gap-3 flex-wrap">
+            <RouterLink
+              to="/app/products"
+              class="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl font-bold text-white transition-all hover:opacity-90 active:scale-95"
+              style="
+                background: #0f122b;
+                font-size: 0.95rem;
+                box-shadow: 0 4px 20px rgba(15, 18, 43, 0.25);
+              "
             >
-              수집된 뉴스가 없습니다
-            </div>
-
-            <div v-else class="space-y-3">
-              <a
-                v-for="(article, idx) in top3[kw.key]" :key="article.id"
-                :href="article.url" target="_blank" rel="noopener noreferrer"
-                class="group flex items-start gap-3 p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
-              >
-                <span class="text-base font-black flex-shrink-0 mt-0.5">{{ RANK_ICONS[idx] }}</span>
-                <div class="flex-1 min-w-0">
-                  <h4 class="text-sm font-semibold text-gray-900 leading-snug line-clamp-2 group-hover:text-blue-700 transition-colors mb-1.5">
-                    {{ article.title }}
-                  </h4>
-                  <p v-if="article.summary"
-                    class="text-xs text-gray-500 leading-relaxed line-clamp-2 mb-1.5"
-                  >{{ article.summary }}</p>
-                  <span class="text-xs text-gray-400">{{ fmtDate(article.published_date) }}</span>
-                </div>
-                <ExternalLink class="w-3.5 h-3.5 flex-shrink-0 text-gray-300 group-hover:text-blue-500 transition-colors mt-1" />
-              </a>
-            </div>
+              시작하기 →
+            </RouterLink>
+            <RouterLink
+              to="/intro"
+              class="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl font-semibold transition-all hover:bg-gray-50 active:scale-95"
+              style="
+                background: white;
+                border: 1.5px solid #eef1f5;
+                color: #0f122b;
+                font-size: 0.95rem;
+              "
+            >
+              서비스 둘러보기
+            </RouterLink>
           </div>
         </div>
-      </div>
-    </section>
 
-    <!-- ─── 주요 서비스 ──────────────────────────────────────────────── -->
-    <section class="py-14 bg-slate-50 border-t border-gray-100">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6">
-        <h2 class="text-xl font-black text-gray-900 mb-7 flex items-center gap-2">
-          <Zap class="w-5 h-5 text-blue-600" />주요 서비스
-        </h2>
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          <RouterLink
-            v-for="svc in services" :key="svc.to"
-            :to="svc.to"
-            class="group flex flex-col items-center text-center gap-3 p-5 rounded-2xl border hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
-            :class="[svc.color, svc.border]"
-          >
-            <div class="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center">
-              <component :is="svc.icon" class="w-5 h-5" :class="svc.iconColor" />
-            </div>
-            <div>
-              <p class="text-sm font-bold text-gray-900">{{ svc.label }}</p>
-              <p class="text-xs text-gray-500 mt-0.5 leading-snug">{{ svc.desc }}</p>
-            </div>
-            <ArrowRight class="w-3.5 h-3.5 text-gray-300 group-hover:text-current group-hover:translate-x-0.5 transition-all" />
-          </RouterLink>
-        </div>
-      </div>
-    </section>
-
-    <!-- ─── 보안 팁 배너 ─────────────────────────────────────────────── -->
-    <section class="py-10 bg-white border-t border-gray-100">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6">
-        <div class="rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center gap-5"
-          style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)"
+        <!-- ── Right: Hero image ── -->
+        <div
+          class="flex-1 hidden md:flex items-center justify-end relative self-stretch"
         >
-          <div class="flex-shrink-0 w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-            <AlertTriangle class="w-6 h-6 text-yellow-300" />
-          </div>
-          <div class="flex-1 text-white">
-            <p class="font-bold text-base mb-1">금융사기 의심될 땐 즉시 신고</p>
-            <p class="text-sm" style="color:rgba(219,234,254,0.8)">
-              금융감독원 1332 · 경찰청 182 · 한국인터넷진흥원 118
-            </p>
-          </div>
-          <RouterLink to="/voicephishing"
-            class="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 bg-white font-bold text-sm rounded-xl hover:bg-blue-50 transition-all"
-            style="color:#1e3a8a"
-          >
-            <PhoneOff class="w-4 h-4" />지금 분석하기
-          </RouterLink>
+          <img
+            src="/hero2.png"
+            alt="hero"
+            class="h-full object-cover"
+            style="
+              width: 180%;
+              max-width: 825px;
+              pointer-events: none;
+              user-select: none;
+              mix-blend-mode: multiply;
+            "
+          />
         </div>
       </div>
     </section>
+
+    <!-- ═══════════════════════ MAIN CONTENT ═══════════════════════ -->
+    <div class="max-w-[1520px] mx-auto px-6 pb-12" style="margin-top: 32px">
+      <!-- Row 1: 주요기능 + 실시간주식 -->
+      <div class="flex flex-col lg:flex-row gap-4 mb-4">
+        <!-- ── 주요 기능 ── -->
+        <div
+          class="lg:flex-[5] rounded-[24px] p-4 transition-all duration-300 hover:-translate-y-1 flex flex-col"
+          style="
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(15, 18, 43, 0.05);
+            box-shadow: 0 8px 32px rgba(15, 18, 43, 0.05),
+              0 2px 8px rgba(15, 18, 43, 0.03);
+          "
+        >
+          <h2
+            class="font-bold text-sm mb-3 flex-shrink-0"
+            style="color: #0f122b"
+          >
+            주요 기능
+          </h2>
+          <div class="grid grid-cols-2 gap-2 flex-1">
+            <RouterLink
+              v-for="feat in features"
+              :key="feat.title"
+              :to="feat.to"
+              class="group flex items-center gap-3 p-4 rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-sm"
+              style="background: #fcfcfc; border: 1px solid #eef1f5"
+            >
+              <div
+                class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:scale-110"
+                :style="{ background: feat.bg }"
+              >
+                <component
+                  :is="feat.icon"
+                  class="w-5 h-5"
+                  :style="{ color: feat.iconColor }"
+                />
+              </div>
+              <div class="min-w-0">
+                <p class="font-bold text-sm" style="color: #0f122b">
+                  {{ feat.title }}
+                </p>
+                <p
+                  class="mt-0.5 leading-tight"
+                  style="color: #6f7485; font-size: 0.75rem"
+                >
+                  {{ feat.desc }}
+                </p>
+              </div>
+            </RouterLink>
+          </div>
+        </div>
+
+        <!-- ── 실시간 주식 ── -->
+        <div
+          class="lg:flex-[7] rounded-[24px] p-4 transition-all duration-300 hover:-translate-y-1"
+          style="
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(15, 18, 43, 0.05);
+            box-shadow: 0 8px 32px rgba(15, 18, 43, 0.05),
+              0 2px 8px rgba(15, 18, 43, 0.03);
+          "
+        >
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="font-bold text-sm" style="color: #0f122b">
+              실시간 주식
+            </h2>
+            <RouterLink
+              to="/app/stocks"
+              class="text-xs font-semibold flex items-center gap-1 transition-opacity hover:opacity-60"
+              style="color: #6f7485"
+            >
+              전체 보기 <ArrowRight class="w-3 h-3" />
+            </RouterLink>
+          </div>
+
+          <!-- Loading -->
+          <div
+            v-if="moversLoading"
+            class="flex items-center justify-center h-40"
+          >
+            <Loader2 class="w-5 h-5 animate-spin" style="color: #57e0c3" />
+          </div>
+
+          <div v-else-if="topStocks.length" class="flex gap-4 items-stretch">
+            <!-- ── 왼쪽: 활성 카드 + 하단 4종목 ── -->
+            <div
+              class="flex-shrink-0 flex flex-col gap-3 justify-center"
+              style="width: 42%"
+            >
+              <!-- 활성 카드 (자동 순환) -->
+              <div
+                class="rounded-2xl p-4 flex-shrink-0"
+                style="
+                  background: white;
+                  box-shadow: 0 4px 20px rgba(15, 18, 43, 0.08);
+                  border: 1px solid rgba(15, 18, 43, 0.04);
+                "
+              >
+                <div class="flex items-center gap-3 mb-2">
+                  <div class="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center" style="background:#F8F9FF;border:1px solid #EEF1F5">
+                    <img
+                      :src="`https://static.toss.im/png-icons/securities/icn-sec-fill-${logoCode(activeStock?.symbol ?? '')}.png`"
+                      :alt="activeStock?.name"
+                      class="w-full h-full object-cover"
+                      @error="e => { e.target.style.display='none'; e.target.nextElementSibling.style.display='flex' }"
+                    />
+                    <span class="font-black hidden items-center justify-center w-full h-full" style="font-size:0.65rem;color:#0F122B">
+                      {{ activeStock?.name?.slice(0,2) }}
+                    </span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="font-black truncate" style="font-size:0.95rem;color:#0F122B">{{ activeStock?.name }}</p>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full font-bold" style="background:#DFFAF4;color:#0D9B7A;font-size:0.62rem">시총 {{ activeIdx + 1 }}위</span>
+                  </div>
+                </div>
+                <div class="flex items-baseline gap-2">
+                  <span
+                    class="font-black tabular-nums"
+                    style="font-size: 1.3rem; color: #0f122b; line-height: 1"
+                  >
+                    {{
+                      activeStock?.close != null
+                        ? Math.round(activeStock.close).toLocaleString()
+                        : "-"
+                    }}
+                  </span>
+                  <span
+                    class="font-bold tabular-nums"
+                    style="font-size: 0.8rem"
+                    :style="{
+                      color:
+                        (activeStock?.change_pct ?? 0) >= 0
+                          ? '#E5323B'
+                          : '#3B7FED',
+                    }"
+                  >
+                    {{
+                      activeStock?.change_pct != null
+                        ? (activeStock.change_pct >= 0 ? "▲ " : "▼ ") +
+                          Math.abs(activeStock.change_pct).toFixed(2) +
+                          "%"
+                        : ""
+                    }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- 하단 4슬롯 가로 (active 제외한 나머지) -->
+              <div class="flex gap-2">
+                <div
+                  v-for="s in otherStocks"
+                  :key="s.symbol"
+                  class="flex-1 text-left px-2 py-2 rounded-xl min-w-0"
+                  style="background: #f8f9ff"
+                >
+                  <div class="w-7 h-7 rounded-lg overflow-hidden mb-1 flex items-center justify-center" style="background:white;border:1px solid #EEF1F5">
+                    <img
+                      :src="`https://static.toss.im/png-icons/securities/icn-sec-fill-${logoCode(s.symbol)}.png`"
+                      :alt="s.name"
+                      class="w-full h-full object-cover"
+                      @error="e => { e.target.style.display='none'; e.target.nextElementSibling.style.display='flex' }"
+                    />
+                    <span class="font-black hidden items-center justify-center w-full h-full" style="font-size:0.55rem;color:#0F122B">
+                      {{ s.name?.slice(0,2) }}
+                    </span>
+                  </div>
+                  <p class="font-black tabular-nums mb-0.5" style="font-size:0.62rem;color:#6f7485">{{ s.rank + 1 }}위</p>
+                  <p class="font-bold truncate mb-1" style="font-size:0.75rem;color:#0f122b">{{ s.name }}</p>
+                  <p class="font-bold tabular-nums mb-0.5" style="font-size:0.75rem;color:#0f122b">
+                    {{ s.close != null ? Math.round(s.close).toLocaleString() : "-" }}
+                  </p>
+                  <p class="font-bold tabular-nums" style="font-size:0.72rem" :style="{ color: (s.change_pct ?? 0) >= 0 ? '#E5323B' : '#3B7FED' }">
+                    {{ s.change_pct != null ? (s.change_pct >= 0 ? "▲" : "▼") + Math.abs(s.change_pct).toFixed(2) + "%" : "-" }}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── 오른쪽: 코스피 차트 ── -->
+            <div class="flex-1 flex flex-col gap-2">
+              <div class="flex items-baseline gap-2 flex-wrap">
+                <span
+                  class="font-bold"
+                  style="font-size: 0.75rem; color: #6f7485"
+                  >코스피</span
+                >
+                <span
+                  class="font-black tabular-nums"
+                  style="font-size: 1.3rem; color: #0f122b; line-height: 1"
+                >
+                  {{
+                    indexData?.kospi?.value != null
+                      ? Number(indexData.kospi.value).toLocaleString("ko-KR", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })
+                      : "—"
+                  }}
+                </span>
+                <span
+                  v-if="indexData?.kospi?.change_pct != null"
+                  class="font-bold tabular-nums"
+                  style="font-size: 0.8rem"
+                  :style="{
+                    color:
+                      indexData.kospi.change_pct >= 0 ? '#E5323B' : '#3B7FED',
+                  }"
+                >
+                  {{
+                    (indexData.kospi.change_pct >= 0 ? "▲ " : "▼ ") +
+                    Math.abs(indexData.kospi.change_pct).toFixed(2) +
+                    "%"
+                  }}
+                </span>
+              </div>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <button
+                  v-for="p in KOSPI_PERIODS"
+                  :key="p.value"
+                  @click="kospiPeriod = p.value"
+                  class="px-3 py-1 rounded-full font-bold transition-all"
+                  style="font-size: 0.72rem"
+                  :style="
+                    kospiPeriod === p.value
+                      ? 'background:#0F122B;color:white'
+                      : 'background:#F8F9FF;color:#6F7485'
+                  "
+                >
+                  {{ p.label }}
+                </button>
+              </div>
+              <div class="relative flex-1" style="min-height: 200px">
+                <div
+                  v-if="kospiLoading"
+                  class="absolute inset-0 flex items-center justify-center"
+                >
+                  <Loader2
+                    class="w-4 h-4 animate-spin"
+                    style="color: #57e0c3"
+                  />
+                </div>
+                <Line
+                  v-else-if="kospiHistory.length"
+                  :data="kospiChartData"
+                  :options="chartOpts"
+                  style="height: 100%; width: 100%"
+                />
+                <div
+                  v-else
+                  class="absolute inset-0 flex items-center justify-center"
+                  style="font-size: 0.75rem; color: #6f7485"
+                >
+                  차트 데이터 없음
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            v-else
+            class="flex items-center justify-center h-40"
+            style="font-size: 0.8rem; color: #6f7485"
+          >
+            데이터를 불러오는 중...
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2: 금융 뉴스 TOP3 -->
+      <div
+        class="rounded-[24px] p-4 transition-all duration-300 hover:-translate-y-1"
+        style="
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(15, 18, 43, 0.05);
+          box-shadow: 0 8px 32px rgba(15, 18, 43, 0.05),
+            0 2px 8px rgba(15, 18, 43, 0.03);
+        "
+      >
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-bold text-sm" style="color: #0f122b">
+            금융 뉴스 TOP3
+          </h2>
+          <RouterLink
+            to="/app/news"
+            class="text-xs font-semibold flex items-center gap-1 transition-opacity hover:opacity-60"
+            style="color: #6f7485"
+          >
+            더보기 <ArrowRight class="w-3 h-3" />
+          </RouterLink>
+        </div>
+
+        <!-- Loading -->
+        <div v-if="newsLoading" class="flex items-center justify-center h-28">
+          <Loader2 class="w-5 h-5 animate-spin" style="color: #57e0c3" />
+        </div>
+
+        <!-- News cards -->
+        <div
+          v-else-if="financialNews.length"
+          class="grid grid-cols-1 sm:grid-cols-3 gap-3"
+        >
+          <a
+            v-for="(item, i) in financialNews"
+            :key="i"
+            :href="item.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="group flex gap-3 p-3 rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:shadow-sm items-start"
+            style="border: 1px solid #eef1f5"
+          >
+            <!-- 컬러 아이콘 박스 -->
+            <div
+              class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+              :style="{ background: NEWS_COLORS[i] }"
+            >
+              <Newspaper class="w-5 h-5 opacity-40" style="color: #0f122b" />
+            </div>
+            <!-- Content -->
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5 mb-1">
+                <span
+                  class="font-semibold"
+                  style="color: #57e0c3; font-size: 0.65rem"
+                  >금융뉴스</span
+                >
+                <span style="color: #eef1f5; font-size: 0.65rem">·</span>
+                <span style="color: #6f7485; font-size: 0.65rem">{{
+                  fmtPubDate(item.pub_date)
+                }}</span>
+              </div>
+              <h3
+                class="font-bold leading-snug line-clamp-2 group-hover:opacity-70 transition-opacity"
+                style="color: #0f122b; font-size: 0.8rem"
+              >
+                {{ item.title }}
+              </h3>
+            </div>
+          </a>
+        </div>
+
+        <!-- 뉴스 없음 -->
+        <div
+          v-else
+          class="flex flex-col items-center justify-center py-8 gap-1.5"
+        >
+          <Newspaper class="w-6 h-6 opacity-20" style="color: #6f7485" />
+          <p style="font-size: 0.8rem; color: #6f7485">
+            금융 뉴스를 불러오는 중입니다.
+          </p>
+        </div>
+      </div>
+    </div>
 
     <AppFooter />
   </div>
 </template>
 
 <style scoped>
-@keyframes progressBar {
-  from { width: 0% }
-  to   { width: 100% }
+@keyframes heroFloat {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-18px) rotate(4deg);
+  }
 }
-.progress-bar {
-  animation: progressBar 4s linear forwards;
+@keyframes heroFloatRev {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(14px);
+  }
+}
+
+.hero-float {
+  animation: heroFloat 7s ease-in-out infinite;
+}
+.hero-float-rev {
+  animation: heroFloatRev 6s ease-in-out infinite;
 }
 </style>

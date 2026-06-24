@@ -1,30 +1,32 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ShieldCheck, Menu, X, UserCircle2, LogIn, LogOut, ChevronDown } from '@lucide/vue'
+import { Menu, X, UserCircle2, LogOut, ChevronDown } from '@lucide/vue'
 import { useAuth } from '@/composables/useAuth'
 
-const router     = useRouter()
-const route      = useRoute()
+const router    = useRouter()
+const route     = useRoute()
 const { isLoggedIn, user, logout } = useAuth()
-const mobileOpen           = ref(false)
-const stockOpen            = ref(false)
-const mobileStockOpen      = ref(false)
-const communityOpen        = ref(false)
-const mobileCommunityOpen  = ref(false)
+const mobileOpen          = ref(false)
+const stockOpen           = ref(false)
+const mobileStockOpen     = ref(false)
+const communityOpen       = ref(false)
+const mobileCommunityOpen = ref(false)
 
 const navLinks = [
-  { label: '금융상품', to: '/products' },
-  { label: '지점찾기', to: '/branches' },
-  { label: '지출분석', to: '/spending' },
-  { label: '금 시세',  to: '/app/gold' },
-  { label: '뉴스',     to: '/news' },
+  { label: '금융상품',      to: '/products' },
+  { label: '지점찾기',      to: '/branches' },
+  { label: '지출분석',      to: '/spending' },
+  { label: '금 시세',       to: '/app/gold' },
+  { label: '뉴스',          to: '/news' },
+  { label: '내 포트폴리오', to: '/app/portfolio' },
 ]
 
 const stockSubLinks = [
-  { label: '주식 검색', to: '/stocks' },
-  { label: '매수신호',  to: '/indicators' },
-  { label: 'ML 데이터', to: '/dataset' },
+  { label: '주식 검색',   to: '/stocks' },
+  { label: '매수신호',    to: '/indicators' },
+  { label: 'ML 데이터',   to: '/dataset' },
+  { label: '투자 성향 테스트', to: '/app/investment-type' },
 ]
 
 const communitySubLinks = [
@@ -35,7 +37,6 @@ const communitySubLinks = [
 const isStockActive = computed(() =>
   ['/stocks', '/indicators', '/dataset'].some(p => route.path.includes(p))
 )
-
 const isCommunityActive = computed(() => route.path.includes('/community'))
 
 async function handleLogout() {
@@ -46,152 +47,130 @@ async function handleLogout() {
 </script>
 
 <template>
-  <nav class="fixed top-0 inset-x-0 z-50 bg-white/96 backdrop-blur-md border-b border-slate-100 shadow-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+  <nav
+    class="fixed top-0 inset-x-0 z-50"
+    style="background:white;border-bottom:1px solid #F0F0F2;font-family:'Pretendard','Noto Sans KR',sans-serif"
+  >
+    <div class="max-w-[1520px] mx-auto px-6 h-16 flex items-center justify-between">
 
       <!-- 로고 -->
-      <RouterLink to="/home" class="flex items-center gap-2.5 select-none">
-        <div class="w-9 h-9 bg-gradient-to-br from-blue-900 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
-          <ShieldCheck class="w-5 h-5 text-white" />
-        </div>
-        <span class="text-xl font-black tracking-tight">
-          <span class="text-blue-900">Safe</span><span class="text-blue-500">Finance</span>
-        </span>
-        <span class="hidden sm:flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 blink"></span>안전
-        </span>
+      <RouterLink to="/home" class="flex items-center gap-2 select-none flex-shrink-0">
+        <svg width="34" height="28" viewBox="0 0 46 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="15" cy="9" r="6" fill="#FFA726"/>
+          <circle cx="31" cy="9" r="6" fill="#4ECBA8"/>
+          <path d="M7 20 Q23 36 39 20" stroke="#0F122B" stroke-width="6" stroke-linecap="round" fill="none"/>
+        </svg>
+        <span class="font-black text-lg" style="color:#0F122B;letter-spacing:-0.5px">moni</span>
       </RouterLink>
 
       <!-- 데스크탑 메뉴 -->
-      <div class="hidden md:flex items-center gap-0.5">
-        <!-- 금융상품, 지점찾기 -->
+      <div class="hidden md:flex items-center gap-1" style="margin-left:48px;margin-right:auto">
+
+        <!-- 금융상품, 지점찾기, 지출분석 -->
         <RouterLink
-          v-for="link in navLinks.slice(0, 2)"
+          v-for="link in navLinks.slice(0, 3)"
           :key="link.to"
           :to="link.to"
-          class="px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap"
-          :class="$route.path === link.to
-            ? 'text-blue-700 bg-blue-50'
-            : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'"
+          class="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-150 whitespace-nowrap"
+          :style="$route.path === link.to
+            ? 'color:#0F122B;background:#F4F5F8'
+            : 'color:#6F7485'"
+          style="font-size:0.9rem"
         >
           {{ link.label }}
         </RouterLink>
 
-        <!-- 지출분석 -->
-        <RouterLink
-          :to="navLinks[2].to"
-          class="px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap"
-          :class="$route.path === navLinks[2].to
-            ? 'text-blue-700 bg-blue-50'
-            : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'"
-        >
-          {{ navLinks[2].label }}
-        </RouterLink>
-
         <!-- 주식 드롭다운 -->
-        <div
-          class="relative"
-          @mouseenter="stockOpen = true"
-          @mouseleave="stockOpen = false"
-        >
+        <div class="relative" @mouseenter="stockOpen = true" @mouseleave="stockOpen = false">
           <button
-            class="flex items-center gap-0.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap"
-            :class="isStockActive
-              ? 'text-blue-700 bg-blue-50'
-              : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'"
+            class="flex items-center gap-0.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-150 whitespace-nowrap"
+            :style="isStockActive ? 'color:#0F122B;background:#F4F5F8' : 'color:#6F7485'"
+            style="font-size:0.9rem"
           >
             주식
-            <ChevronDown class="w-3 h-3 transition-transform duration-200" :class="stockOpen ? 'rotate-180' : ''" />
+            <ChevronDown class="w-3.5 h-3.5 transition-transform duration-200" :class="stockOpen ? 'rotate-180' : ''" />
           </button>
-
-          <div v-show="stockOpen" class="absolute top-full left-0 w-36 pt-1 z-50">
-            <div class="bg-white rounded-xl border border-gray-200 shadow-lg py-1">
+          <div v-show="stockOpen" class="absolute top-full left-0 pt-1 z-50" style="min-width:140px">
+            <div class="rounded-2xl py-1.5" style="background:white;border:1px solid #EEF1F5;box-shadow:0 8px 24px rgba(15,18,43,0.1)">
               <RouterLink
                 v-for="sub in stockSubLinks"
                 :key="sub.to"
                 :to="sub.to"
                 @click="stockOpen = false"
-                class="block px-4 py-2 text-xs font-semibold transition-colors"
-                :class="$route.path.includes(sub.to.replace('/', ''))
-                  ? 'text-blue-700 bg-blue-50'
-                  : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'"
-              >
-                {{ sub.label }}
-              </RouterLink>
+                class="block px-4 py-2 text-sm font-semibold transition-colors"
+                :style="$route.path.includes(sub.to.replace('/',''))
+                  ? 'color:#0F122B;background:#F4F5F8'
+                  : 'color:#6F7485'"
+              >{{ sub.label }}</RouterLink>
             </div>
           </div>
         </div>
 
-        <!-- 보안뉴스 -->
+        <!-- 금 시세, 뉴스 -->
         <RouterLink
           v-for="link in navLinks.slice(3)"
           :key="link.to"
           :to="link.to"
-          class="px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap"
-          :class="$route.path === link.to
-            ? 'text-blue-700 bg-blue-50'
-            : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'"
+          class="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-150 whitespace-nowrap"
+          :style="$route.path === link.to
+            ? 'color:#0F122B;background:#F4F5F8'
+            : 'color:#6F7485'"
+          style="font-size:0.9rem"
         >
           {{ link.label }}
         </RouterLink>
 
         <!-- 커뮤니티 드롭다운 -->
-        <div
-          class="relative"
-          @mouseenter="communityOpen = true"
-          @mouseleave="communityOpen = false"
-        >
+        <div class="relative" @mouseenter="communityOpen = true" @mouseleave="communityOpen = false">
           <button
-            class="flex items-center gap-0.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap"
-            :class="isCommunityActive
-              ? 'text-blue-700 bg-blue-50'
-              : 'text-gray-600 hover:text-blue-700 hover:bg-blue-50'"
+            class="flex items-center gap-0.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-150 whitespace-nowrap"
+            :style="isCommunityActive ? 'color:#0F122B;background:#F4F5F8' : 'color:#6F7485'"
+            style="font-size:0.9rem"
           >
             커뮤니티
-            <ChevronDown class="w-3 h-3 transition-transform duration-200" :class="communityOpen ? 'rotate-180' : ''" />
+            <ChevronDown class="w-3.5 h-3.5 transition-transform duration-200" :class="communityOpen ? 'rotate-180' : ''" />
           </button>
-
-          <div v-show="communityOpen" class="absolute top-full left-0 w-36 pt-1 z-50">
-            <div class="bg-white rounded-xl border border-gray-200 shadow-lg py-1">
+          <div v-show="communityOpen" class="absolute top-full left-0 pt-1 z-50" style="min-width:140px">
+            <div class="rounded-2xl py-1.5" style="background:white;border:1px solid #EEF1F5;box-shadow:0 8px 24px rgba(15,18,43,0.1)">
               <RouterLink
                 v-for="sub in communitySubLinks"
                 :key="sub.to"
                 :to="sub.to"
                 @click="communityOpen = false"
-                class="block px-4 py-2 text-xs font-semibold transition-colors text-gray-700 hover:bg-blue-50 hover:text-blue-700"
-              >
-                {{ sub.label }}
-              </RouterLink>
+                class="block px-4 py-2 text-sm font-semibold transition-colors"
+                style="color:#6F7485"
+              >{{ sub.label }}</RouterLink>
             </div>
           </div>
         </div>
+      </div>
 
-        <div class="w-px h-5 bg-gray-200 mx-1"></div>
-
-        <!-- 로그인 상태 -->
+      <!-- 우측 버튼 -->
+      <div class="hidden md:flex items-center gap-2">
         <template v-if="isLoggedIn">
           <RouterLink to="/mypage"
-            class="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gray-700 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all"
+            class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+            style="color:#6F7485"
           >
-            <UserCircle2 class="w-4 h-4" />
-            {{ user?.username }}
+            <UserCircle2 class="w-4 h-4" />{{ user?.username }}
           </RouterLink>
           <button @click="handleLogout"
-            class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-900 to-blue-700 text-white text-sm font-bold rounded-lg hover:from-blue-950 hover:to-blue-800 transition-all shadow-sm"
+            class="flex items-center gap-1.5 px-5 py-2 rounded-xl text-sm font-bold transition-all"
+            style="background:#0F122B;color:white"
           >
             <LogOut class="w-4 h-4" />로그아웃
           </button>
         </template>
-
-        <!-- 비로그인 상태 -->
         <template v-else>
           <RouterLink to="/login"
-            class="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gray-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all"
+            class="px-5 py-2 rounded-xl text-sm font-semibold transition-all"
+            style="color:#6F7485;border:1.5px solid #EEF1F5"
           >
-            <LogIn class="w-4 h-4" />로그인
+            로그인
           </RouterLink>
           <RouterLink to="/register"
-            class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-900 to-blue-700 text-white text-sm font-bold rounded-lg hover:from-blue-950 hover:to-blue-800 transition-all shadow-sm"
+            class="px-5 py-2 rounded-xl text-sm font-bold transition-all"
+            style="background:#0F122B;color:white"
           >
             회원가입
           </RouterLink>
@@ -199,111 +178,94 @@ async function handleLogout() {
       </div>
 
       <!-- 모바일 토글 -->
-      <button @click="mobileOpen = !mobileOpen" class="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors">
-        <X    v-if="mobileOpen" class="w-5 h-5 text-gray-600" />
-        <Menu v-else             class="w-5 h-5 text-gray-600" />
+      <button @click="mobileOpen = !mobileOpen" class="md:hidden p-2 rounded-xl transition-colors" style="color:#6F7485">
+        <X    v-if="mobileOpen" class="w-5 h-5" />
+        <Menu v-else             class="w-5 h-5" />
       </button>
     </div>
 
     <!-- 모바일 드로어 -->
-    <div v-show="mobileOpen" class="md:hidden border-t border-gray-100 bg-white px-4 py-3 space-y-1">
-      <!-- 금융상품, 지점찾기, 지출분석 -->
+    <div v-show="mobileOpen" class="md:hidden px-4 py-3 space-y-1" style="border-top:1px solid #F0F0F2;background:white">
       <RouterLink
         v-for="link in navLinks.slice(0, 3)"
         :key="link.to"
         :to="link.to"
         @click="mobileOpen = false"
-        class="block px-3 py-2 text-sm font-medium rounded-lg"
-        :class="$route.path === link.to
-          ? 'text-blue-700 bg-blue-50 font-semibold'
-          : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'"
-      >
-        {{ link.label }}
-      </RouterLink>
+        class="block px-3 py-2.5 text-sm font-semibold rounded-xl"
+        :style="$route.path === link.to ? 'color:#0F122B;background:#F4F5F8' : 'color:#6F7485'"
+      >{{ link.label }}</RouterLink>
 
-      <!-- 주식 (모바일 아코디언) -->
       <div>
         <button
           @click="mobileStockOpen = !mobileStockOpen"
-          class="w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg"
-          :class="isStockActive
-            ? 'text-blue-700 bg-blue-50 font-semibold'
-            : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'"
+          class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold rounded-xl"
+          :style="isStockActive ? 'color:#0F122B;background:#F4F5F8' : 'color:#6F7485'"
         >
           주식
           <ChevronDown class="w-4 h-4 transition-transform duration-200" :class="mobileStockOpen ? 'rotate-180' : ''" />
         </button>
-        <div v-show="mobileStockOpen" class="ml-3 mt-1 space-y-0.5 border-l-2 border-blue-100 pl-3">
+        <div v-show="mobileStockOpen" class="ml-3 mt-1 space-y-0.5 border-l-2 pl-3" style="border-color:#EEF1F5">
           <RouterLink
             v-for="sub in stockSubLinks"
             :key="sub.to"
             :to="sub.to"
             @click="mobileOpen = false; mobileStockOpen = false"
-            class="block px-3 py-2 text-sm font-medium rounded-lg"
-            :class="$route.path.includes(sub.to.replace('/', ''))
-              ? 'text-blue-700 bg-blue-50 font-semibold'
-              : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'"
-          >
-            {{ sub.label }}
-          </RouterLink>
+            class="block px-3 py-2 text-sm font-semibold rounded-xl"
+            style="color:#6F7485"
+          >{{ sub.label }}</RouterLink>
         </div>
       </div>
 
-      <!-- 보안뉴스 -->
       <RouterLink
         v-for="link in navLinks.slice(3)"
         :key="link.to"
         :to="link.to"
         @click="mobileOpen = false"
-        class="block px-3 py-2 text-sm font-medium rounded-lg"
-        :class="$route.path === link.to
-          ? 'text-blue-700 bg-blue-50 font-semibold'
-          : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'"
-      >
-        {{ link.label }}
-      </RouterLink>
+        class="block px-3 py-2.5 text-sm font-semibold rounded-xl"
+        :style="$route.path === link.to ? 'color:#0F122B;background:#F4F5F8' : 'color:#6F7485'"
+      >{{ link.label }}</RouterLink>
 
-      <!-- 커뮤니티 (모바일 아코디언) -->
       <div>
         <button
           @click="mobileCommunityOpen = !mobileCommunityOpen"
-          class="w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg"
-          :class="isCommunityActive
-            ? 'text-blue-700 bg-blue-50 font-semibold'
-            : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'"
+          class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold rounded-xl"
+          :style="isCommunityActive ? 'color:#0F122B;background:#F4F5F8' : 'color:#6F7485'"
         >
           커뮤니티
           <ChevronDown class="w-4 h-4 transition-transform duration-200" :class="mobileCommunityOpen ? 'rotate-180' : ''" />
         </button>
-        <div v-show="mobileCommunityOpen" class="ml-3 mt-1 space-y-0.5 border-l-2 border-blue-100 pl-3">
+        <div v-show="mobileCommunityOpen" class="ml-3 mt-1 space-y-0.5 border-l-2 pl-3" style="border-color:#EEF1F5">
           <RouterLink
             v-for="sub in communitySubLinks"
             :key="sub.to"
             :to="sub.to"
             @click="mobileOpen = false; mobileCommunityOpen = false"
-            class="block px-3 py-2 text-sm font-medium rounded-lg text-gray-600 hover:bg-blue-50 hover:text-blue-700"
-          >
-            {{ sub.label }}
-          </RouterLink>
+            class="block px-3 py-2 text-sm font-semibold rounded-xl"
+            style="color:#6F7485"
+          >{{ sub.label }}</RouterLink>
         </div>
       </div>
 
-      <div class="border-t border-gray-100 pt-2 mt-1 space-y-1">
+      <div class="pt-2 mt-1 space-y-1.5" style="border-top:1px solid #F0F0F2">
         <template v-if="isLoggedIn">
           <RouterLink to="/mypage" @click="mobileOpen = false"
-            class="block px-3 py-2 text-sm font-semibold text-blue-700 bg-blue-50 rounded-lg"
-          >
-            <UserCircle2 class="inline w-4 h-4 mr-1" />{{ user?.username }}
-          </RouterLink>
+            class="block px-3 py-2.5 text-sm font-semibold rounded-xl"
+            style="color:#0F122B;background:#F4F5F8"
+          ><UserCircle2 class="inline w-4 h-4 mr-1" />{{ user?.username }}</RouterLink>
           <button @click="handleLogout"
-            class="w-full text-left px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-lg"
-          >
-            <LogOut class="inline w-4 h-4 mr-1" />로그아웃
-          </button>
+            class="w-full text-left px-3 py-2.5 text-sm font-semibold rounded-xl"
+            style="color:white;background:#0F122B"
+          ><LogOut class="inline w-4 h-4 mr-1" />로그아웃</button>
         </template>
         <template v-else>
-          <RouterLink to="/login"   @click="mobileOpen = false" class="block px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-blue-50 rounded-lg">로그인</RouterLink>
-          <RouterLink to="/register" @click="mobileOpen = false" class="block px-3 py-2 text-sm font-bold text-white bg-blue-700 rounded-lg text-center">회원가입</RouterLink>
+          <RouterLink to="/login" @click="mobileOpen = false"
+            class="block px-3 py-2.5 text-sm font-semibold rounded-xl text-center"
+            style="color:#6F7485;border:1.5px solid #EEF1F5"
+          >로그인</RouterLink>
+          <RouterLink to="/register" @click="mobileOpen = false"
+            class="block px-3 py-2.5 text-sm font-bold rounded-xl text-center"
+            style="background:#0F122B;color:white"
+          >회원가입</RouterLink>
         </template>
       </div>
     </div>

@@ -52,7 +52,9 @@ const router = createRouter({
         { path: 'spending',     component: () => import('@/views/SpendingView.vue'),      meta: { requiresAuth: true } },
         { path: 'notify-sim',   component: () => import('@/views/NotifySimView.vue'),     meta: { requiresAuth: true } },
         { path: 'indicators',   component: () => import('@/views/IndicatorsView.vue'),    meta: { requiresAuth: true } },
-        { path: 'mypage',       component: () => import('@/views/MyPageView.vue'),        meta: { requiresAuth: true } },
+        { path: 'mypage',           component: () => import('@/views/MyPageView.vue'),           meta: { requiresAuth: true } },
+        { path: 'investment-type', component: () => import('@/views/InvestmentTypeView.vue') },
+        { path: 'portfolio',       component: () => import('@/views/PortfolioView.vue'),       meta: { requiresAuth: true } },
       ],
     },
 

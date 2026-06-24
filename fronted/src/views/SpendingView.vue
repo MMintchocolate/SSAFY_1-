@@ -345,22 +345,22 @@ function heatText(intensity) { return intensity > 0.5 ? '#fff' : '#374151' }
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-white" style="font-family:'Pretendard','Noto Sans KR',sans-serif">
     <NavBar />
     <main class="pt-24 pb-16 max-w-5xl mx-auto px-4 sm:px-6">
 
       <!-- 헤더 -->
       <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
         <div>
-          <div class="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-1.5 rounded-full mb-3 border border-indigo-100">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold mb-3" style="background:#DFFAF4;color:#0D9B7A;font-size:0.72rem">
             <TrendingUp class="w-3 h-3" />지출 분석
           </div>
-          <h1 class="text-3xl font-extrabold text-gray-900">소비 대시보드</h1>
-          <p class="text-gray-400 text-sm mt-1">거래 내역 CSV를 업로드하면 자동으로 분석합니다</p>
+          <h1 class="font-black" style="font-size:1.8rem;color:#0F122B">소비 대시보드</h1>
+          <p class="mt-1" style="color:#6F7485;font-size:0.9rem">거래 내역 CSV를 업로드하면 자동으로 분석합니다</p>
         </div>
 
         <!-- CSV 업로드 -->
-        <label class="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50 cursor-pointer transition-colors text-sm font-bold text-indigo-600 shrink-0">
+        <label class="flex items-center gap-2 px-4 py-2.5 rounded-xl cursor-pointer transition-colors text-sm font-bold shrink-0" style="border:2px dashed #57E0C3;color:#0D9B7A">
           <CloudUpload class="w-4 h-4" />
           {{ uploading ? '분석 중...' : 'CSV 교체' }}
           <input type="file" accept=".csv" class="hidden" :disabled="uploading" @change="onCsvUpload" />
@@ -368,10 +368,10 @@ function heatText(intensity) { return intensity > 0.5 ? '#fff' : '#374151' }
       </div>
 
       <!-- 업로드 결과 -->
-      <div v-if="uploadMsg" class="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 mb-4">
+      <div v-if="uploadMsg" class="flex items-center gap-2 text-sm rounded-xl px-4 py-2.5 mb-4" style="background:#DFFAF4;border:1px solid #57E0C3;color:#0D9B7A">
         <CircleCheck class="w-4 h-4 shrink-0" />{{ uploadMsg }}
       </div>
-      <div v-if="uploadErr" class="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 mb-4">
+      <div v-if="uploadErr" class="flex items-center gap-2 text-sm rounded-xl px-4 py-2.5 mb-4" style="background:#FFF5F5;border:1px solid #FFD0D0;color:#E5323B">
         <CircleAlert class="w-4 h-4 shrink-0" />{{ uploadErr }}
       </div>
 
@@ -380,44 +380,44 @@ function heatText(intensity) { return intensity > 0.5 ? '#fff' : '#374151' }
         <button
           v-for="d in DIRECTIONS" :key="d.key"
           @click="direction = d.key"
-          class="px-5 py-2 rounded-xl text-sm font-bold border-2 transition-all"
-          :class="direction === d.key
+          class="px-5 py-2 rounded-xl text-sm font-bold transition-all"
+          :style="direction === d.key
             ? d.key === 'out'
-              ? 'bg-rose-500 border-rose-500 text-white shadow-md'
-              : 'bg-emerald-500 border-emerald-500 text-white shadow-md'
-            : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'"
+              ? 'background:#E5323B;color:white'
+              : 'background:#57E0C3;color:#0F122B'
+            : 'background:white;color:#6F7485;border:1.5px solid #EEF1F5'"
         >{{ d.label }}</button>
       </div>
 
       <!-- 기간 토글 + 직접 설정 -->
       <div class="flex flex-wrap items-center gap-3 mb-6">
-        <div class="flex gap-1 bg-white border border-gray-200 rounded-xl p-1 shadow-sm">
+        <div class="flex gap-1 p-1 rounded-xl" style="background:white;border:1px solid #EEF1F5">
           <button
             v-for="p in PERIODS" :key="p.key"
             @click="period = p.key"
             class="px-3.5 py-1.5 rounded-lg text-sm font-bold transition-colors"
-            :class="period === p.key
-              ? 'bg-indigo-600 text-white shadow'
-              : 'text-gray-500 hover:text-gray-800'"
+            :style="period === p.key
+              ? 'background:#0F122B;color:white'
+              : 'color:#6F7485'"
           >{{ p.label }}</button>
         </div>
 
-        <!-- 커스텀 날짜 입력 -->
         <Transition name="slide">
           <div v-if="isCustom" class="flex items-center gap-2">
-            <input
-              type="date" v-model="customStart"
-              class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            <input type="date" v-model="customStart"
+              class="text-sm rounded-lg px-3 py-1.5 focus:outline-none"
+              style="border:1.5px solid #EEF1F5;color:#0F122B"
             />
-            <span class="text-gray-400 font-bold">~</span>
-            <input
-              type="date" v-model="customEnd"
-              class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            <span class="font-bold" style="color:#6F7485">~</span>
+            <input type="date" v-model="customEnd"
+              class="text-sm rounded-lg px-3 py-1.5 focus:outline-none"
+              style="border:1.5px solid #EEF1F5;color:#0F122B"
             />
             <button
               @click="fetchStats"
               :disabled="!customStart || !customEnd"
-              class="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              class="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-bold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              style="background:#0F122B;color:white"
             >
               <Search class="w-3.5 h-3.5" />조회
             </button>
@@ -426,72 +426,70 @@ function heatText(intensity) { return intensity > 0.5 ? '#fff' : '#374151' }
       </div>
 
       <!-- 로딩 / 에러 -->
-      <div v-if="loading" class="flex justify-center py-20 text-gray-400 text-sm">분석 중...</div>
-      <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-2xl p-6 text-red-600 text-sm mb-4">{{ error }}</div>
-      <div v-else-if="isCustom && (!customStart || !customEnd)" class="flex justify-center py-16 text-gray-400 text-sm">날짜 범위를 선택하고 조회를 눌러주세요</div>
+      <div v-if="loading" class="flex justify-center py-20 text-sm" style="color:#6F7485">분석 중...</div>
+      <div v-else-if="error" class="rounded-2xl p-6 text-sm mb-4" style="background:#FFF5F5;border:1px solid #FFD0D0;color:#E5323B">{{ error }}</div>
+      <div v-else-if="isCustom && (!customStart || !customEnd)" class="flex justify-center py-16 text-sm" style="color:#6F7485">날짜 범위를 선택하고 조회를 눌러주세요</div>
 
       <template v-else-if="stats">
 
         <!-- ── 요약 카드 ── -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">{{ isOut ? '총 지출' : '총 수입' }}</p>
-            <p class="text-2xl font-extrabold" :class="isOut ? 'text-rose-600' : 'text-emerald-600'">
-              {{ fmt(stats.summary.total) }}<span class="text-base font-bold ml-1">원</span>
+          <div class="rounded-2xl p-5" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
+            <p class="font-bold mb-1" style="font-size:0.72rem;color:#6F7485;letter-spacing:0.08em">{{ isOut ? '총 지출' : '총 수입' }}</p>
+            <p class="font-extrabold" style="font-size:1.5rem" :style="{ color: isOut ? '#E5323B' : '#0D9B7A' }">
+              {{ fmt(stats.summary.total) }}<span style="font-size:1rem;font-weight:700;margin-left:4px">원</span>
             </p>
-            <p class="text-xs text-gray-400 mt-1">{{ stats.summary.count }}건 거래</p>
+            <p class="mt-1" style="font-size:0.75rem;color:#6F7485">{{ stats.summary.count }}건 거래</p>
           </div>
-          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">일 평균</p>
-            <p class="text-2xl font-extrabold text-gray-800">{{ fmt(stats.summary.daily_avg) }}<span class="text-base font-bold ml-1">원</span></p>
+          <div class="rounded-2xl p-5" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
+            <p class="font-bold mb-1" style="font-size:0.72rem;color:#6F7485;letter-spacing:0.08em">일 평균</p>
+            <p class="font-extrabold" style="font-size:1.5rem;color:#0F122B">{{ fmt(stats.summary.daily_avg) }}<span style="font-size:1rem;font-weight:700;margin-left:4px">원</span></p>
           </div>
-          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">{{ isOut ? '최다 지출일' : '최다 수입일' }}</p>
+          <div class="rounded-2xl p-5" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
+            <p class="font-bold mb-1" style="font-size:0.72rem;color:#6F7485;letter-spacing:0.08em">{{ isOut ? '최다 지출일' : '최다 수입일' }}</p>
             <template v-if="stats.summary.max_day">
-              <p class="text-2xl font-extrabold text-orange-500">{{ fmt(stats.summary.max_day.amount) }}<span class="text-base font-bold ml-1">원</span></p>
-              <p class="text-xs text-gray-400 mt-1">{{ stats.summary.max_day.date }}</p>
+              <p class="font-extrabold" style="font-size:1.5rem;color:#FFA726">{{ fmt(stats.summary.max_day.amount) }}<span style="font-size:1rem;font-weight:700;margin-left:4px">원</span></p>
+              <p class="mt-1" style="font-size:0.75rem;color:#6F7485">{{ stats.summary.max_day.date }}</p>
             </template>
-            <p v-else class="text-lg text-gray-300 mt-1">-</p>
+            <p v-else style="font-size:1.1rem;color:#EEF1F5;margin-top:4px">-</p>
           </div>
         </div>
 
         <!-- ── 차트 행 ── -->
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
-          <!-- 막대그래프 -->
-          <div class="lg:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <p class="text-sm font-bold text-gray-700 mb-4">
+          <div class="lg:col-span-3 rounded-2xl p-5" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
+            <p class="font-bold mb-4" style="font-size:0.9rem;color:#0F122B">
               {{ period === 'last_3months' ? '월별' : '일별' }} {{ isOut ? '지출' : '수입' }}
             </p>
             <div v-if="barData.labels.length" style="height:220px">
               <Bar :data="barData" :options="barOptions" />
             </div>
-            <div v-else class="flex items-center justify-center h-48 text-gray-300 text-sm">데이터 없음</div>
+            <div v-else class="flex items-center justify-center h-48 text-sm" style="color:#EEF1F5">데이터 없음</div>
           </div>
 
-          <!-- 도넛 차트 -->
-          <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <p class="text-sm font-bold text-gray-700 mb-4">카테고리별 비중</p>
+          <div class="lg:col-span-2 rounded-2xl p-5" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
+            <p class="font-bold mb-4" style="font-size:0.9rem;color:#0F122B">카테고리별 비중</p>
             <div v-if="donutData.labels.length" style="height:220px">
               <Doughnut :data="donutData" :options="donutOptions" />
             </div>
-            <div v-else class="flex items-center justify-center h-48 text-gray-300 text-sm">데이터 없음</div>
+            <div v-else class="flex items-center justify-center h-48 text-sm" style="color:#EEF1F5">데이터 없음</div>
           </div>
         </div>
 
         <!-- ── 달력 히트맵 ── -->
-        <div v-if="heatmap" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
-          <p class="text-sm font-bold text-gray-700 mb-4">{{ heatmap.title }} 달력 히트맵</p>
+        <div v-if="heatmap" class="rounded-2xl p-5 mb-4" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
+          <p class="font-bold mb-4" style="font-size:0.9rem;color:#0F122B">{{ heatmap.title }} 달력 히트맵</p>
           <div class="grid grid-cols-7 gap-1 mb-1">
             <div v-for="d in DAY_KO" :key="d"
               class="text-center text-xs font-bold py-1"
-              :class="d === '일' ? 'text-red-400' : d === '토' ? 'text-blue-400' : 'text-gray-400'"
+              :style="d === '일' ? 'color:#E5323B' : d === '토' ? 'color:#3B7FED' : 'color:#6F7485'"
             >{{ d }}</div>
           </div>
           <div class="grid grid-cols-7 gap-1">
             <div v-for="i in heatmap.firstDow" :key="`e${i}`" style="min-height:52px"></div>
             <div
               v-for="day in heatmap.days" :key="day.key"
-              class="rounded-xl p-1.5 flex flex-col justify-between transition-all hover:ring-2 hover:ring-indigo-300"
+              class="rounded-xl p-1.5 flex flex-col justify-between transition-all"
               :style="{ backgroundColor: heatBg(day.intensity), minHeight: '52px' }"
             >
               <span class="text-xs font-bold" :style="{ color: heatText(day.intensity) }">{{ day.d }}</span>
@@ -500,11 +498,11 @@ function heatText(intensity) { return intensity > 0.5 ? '#fff' : '#374151' }
               </span>
             </div>
           </div>
-          <div class="mt-3 flex items-center gap-2 text-xs text-gray-400">
+          <div class="mt-3 flex items-center gap-2" style="font-size:0.75rem;color:#6F7485">
             <span>적음</span>
             <div class="flex gap-0.5">
               <div v-for="(a, i) in [0.15, 0.35, 0.55, 0.75, 0.95]" :key="i"
-                class="w-4 h-4 rounded" :style="{ backgroundColor: `rgba(99,102,241,${a})` }" />
+                class="w-4 h-4 rounded" :style="{ backgroundColor: isOut ? `rgba(229,50,59,${a})` : `rgba(87,224,195,${a})` }" />
             </div>
             <span>많음</span>
             <span class="ml-auto">최대: {{ fmt(heatmap.maxAmt) }}원</span>
@@ -512,61 +510,52 @@ function heatText(intensity) { return intensity > 0.5 ? '#fff' : '#374151' }
         </div>
 
         <!-- ── 카테고리 상세 ── -->
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <p class="text-sm font-bold text-gray-700 mb-1">카테고리 상세</p>
-          <p class="text-xs text-gray-400 mb-4">카테고리를 클릭하면 상세 내역을 볼 수 있습니다</p>
+        <div class="rounded-2xl p-5" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
+          <p class="font-bold mb-1" style="font-size:0.9rem;color:#0F122B">카테고리 상세</p>
+          <p class="mb-4" style="font-size:0.75rem;color:#6F7485">카테고리를 클릭하면 상세 내역을 볼 수 있습니다</p>
           <div class="space-y-1">
             <div v-for="(c, i) in stats.by_category" :key="c.category">
-
-              <!-- 카테고리 행 (클릭 토글) -->
               <div
                 @click="toggleCategory(c.category)"
-                class="flex items-center gap-3 px-2 py-2 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors group"
+                class="flex items-center gap-3 px-2 py-2 rounded-xl cursor-pointer transition-colors hover:bg-[#F8F9FF]"
               >
-                <component
-                  :is="expandedCategory === c.category ? ChevronDown : ChevronRight"
-                  class="w-3.5 h-3.5 text-gray-400 flex-shrink-0 transition-transform"
-                />
+                <component :is="expandedCategory === c.category ? ChevronDown : ChevronRight"
+                  class="w-3.5 h-3.5 flex-shrink-0 transition-transform" style="color:#6F7485" />
                 <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="{ backgroundColor: COLORS[i % COLORS.length] }"></span>
-                <span class="text-sm font-semibold text-gray-700 w-16 flex-shrink-0">{{ c.category }}</span>
-                <div class="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                <span class="font-semibold w-16 flex-shrink-0" style="font-size:0.85rem;color:#0F122B">{{ c.category }}</span>
+                <div class="flex-1 rounded-full h-2 overflow-hidden" style="background:#EEF1F5">
                   <div class="h-2 rounded-full transition-all" :style="{ width: c.ratio + '%', backgroundColor: COLORS[i % COLORS.length] }"></div>
                 </div>
-                <span class="text-xs text-gray-400 tabular-nums">{{ c.count }}건</span>
-                <span class="text-sm font-bold text-gray-800 w-24 text-right tabular-nums">{{ fmt(c.amount) }}원</span>
-                <span class="text-xs text-gray-400 w-10 text-right">{{ c.ratio }}%</span>
+                <span class="tabular-nums" style="font-size:0.75rem;color:#6F7485">{{ c.count }}건</span>
+                <span class="font-bold w-24 text-right tabular-nums" style="font-size:0.85rem;color:#0F122B">{{ fmt(c.amount) }}원</span>
+                <span class="w-10 text-right" style="font-size:0.75rem;color:#6F7485">{{ c.ratio }}%</span>
               </div>
 
-              <!-- 가맹점 상세 아코디언 -->
               <Transition name="accordion">
                 <div
                   v-if="expandedCategory === c.category"
-                  class="ml-10 mt-1 mb-2 rounded-xl border border-gray-100 overflow-hidden"
+                  class="ml-10 mt-1 mb-2 rounded-xl overflow-hidden"
+                  style="border:1px solid #EEF1F5"
                 >
-                  <!-- 기타 카테고리일 때 AI 분류 버튼 -->
-                  <div v-if="c.category === '기타'" class="px-3 py-3 bg-violet-50 border-b border-violet-100">
-                    <!-- 상태 메시지 -->
-                    <p v-if="classifyMsg" class="text-xs text-emerald-600 font-semibold mb-2">✓ {{ classifyMsg }}</p>
-                    <p v-else-if="classifyErr" class="text-xs text-red-500 mb-2">{{ classifyErr }}</p>
-                    <p v-else class="text-xs text-violet-500 mb-2">
-                      저장된 분류: <strong>{{ savedMapSize }}개</strong>
-                      <span class="text-gray-400 ml-1">· 미분류만 골라 Gemini 호출해 API를 아낄 수 있습니다</span>
+                  <div v-if="c.category === '기타'" class="px-3 py-3" style="background:#F8F9FF;border-bottom:1px solid #EEF1F5">
+                    <p v-if="classifyMsg" class="font-semibold mb-2" style="font-size:0.75rem;color:#0D9B7A">✓ {{ classifyMsg }}</p>
+                    <p v-else-if="classifyErr" class="mb-2" style="font-size:0.75rem;color:#E5323B">{{ classifyErr }}</p>
+                    <p v-else class="mb-2" style="font-size:0.75rem;color:#6F7485">
+                      저장된 분류: <strong style="color:#0F122B">{{ savedMapSize }}개</strong>
+                      <span class="ml-1" style="color:#6F7485">· 미분류만 골라 Gemini 호출해 API를 아낄 수 있습니다</span>
                     </p>
-                    <!-- 버튼 2개 -->
                     <div class="flex gap-2">
                       <button
                         @click.stop="classifyMisc(true)"
                         :disabled="classifying || savedMapSize === 0"
-                        class="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-violet-300 hover:bg-violet-50 disabled:opacity-40 text-violet-700 text-xs font-bold rounded-lg transition-colors"
-                        title="API 호출 없이 저장된 분류만 적용"
-                      >
-                        저장 분류 적용
-                      </button>
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors disabled:opacity-40"
+                        style="background:white;border:1.5px solid #EEF1F5;color:#0F122B"
+                      >저장 분류 적용</button>
                       <button
                         @click.stop="classifyMisc(false)"
                         :disabled="classifying"
-                        class="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-xs font-bold rounded-lg transition-colors"
-                        title="아직 미분류된 가맹점만 Gemini에 요청"
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
+                        style="background:#0F122B;color:white"
                       >
                         <Sparkles class="w-3.5 h-3.5" :class="{ 'animate-spin': classifying }" />
                         {{ classifying ? '분류 중...' : 'AI 재분류 (미분류만)' }}
@@ -574,7 +563,7 @@ function heatText(intensity) { return intensity > 0.5 ? '#fff' : '#374151' }
                     </div>
                   </div>
 
-                  <div class="bg-gray-50 px-3 py-1.5 flex text-xs font-bold text-gray-400 border-b border-gray-100">
+                  <div class="px-3 py-1.5 flex font-bold" style="background:#F8F9FF;font-size:0.72rem;color:#6F7485;border-bottom:1px solid #EEF1F5">
                     <span class="flex-1">가맹점</span>
                     <span class="w-10 text-center">건수</span>
                     <span class="w-28 text-right">금액</span>
@@ -582,42 +571,40 @@ function heatText(intensity) { return intensity > 0.5 ? '#fff' : '#374151' }
                   <div
                     v-for="m in (stats.category_details?.[c.category] ?? [])"
                     :key="m.merchant"
-                    class="flex items-center px-3 py-2 border-b border-gray-50 last:border-0 hover:bg-white transition-colors"
+                    class="flex items-center px-3 py-2 transition-colors hover:bg-[#F8F9FF]"
+                    style="border-bottom:1px solid #EEF1F5"
                   >
-                    <span class="flex-1 text-sm text-gray-700 truncate">{{ m.merchant || '(미확인)' }}</span>
-                    <span class="w-10 text-center text-xs text-gray-400">{{ m.count }}건</span>
-                    <span class="w-28 text-right text-sm font-semibold tabular-nums"
-                      :style="{ color: COLORS[i % COLORS.length] }">
+                    <span class="flex-1 text-sm truncate" style="color:#0F122B">{{ m.merchant || '(미확인)' }}</span>
+                    <span class="w-10 text-center" style="font-size:0.75rem;color:#6F7485">{{ m.count }}건</span>
+                    <span class="w-28 text-right text-sm font-semibold tabular-nums" :style="{ color: COLORS[i % COLORS.length] }">
                       {{ fmt(m.amount) }}원
                     </span>
                   </div>
-                  <div v-if="!(stats.category_details?.[c.category]?.length)" class="py-4 text-center text-xs text-gray-300">
+                  <div v-if="!(stats.category_details?.[c.category]?.length)" class="py-4 text-center" style="font-size:0.75rem;color:#6F7485">
                     내역 없음
                   </div>
                 </div>
               </Transition>
-
             </div>
-            <div v-if="!stats.by_category.length" class="text-sm text-gray-300 text-center py-4">데이터 없음</div>
+            <div v-if="!stats.by_category.length" class="text-sm text-center py-4" style="color:#6F7485">데이터 없음</div>
           </div>
         </div>
 
-        <!-- ── AI 소비 리포트 ──────────────────────────────────────────── -->
+        <!-- ── AI 소비 리포트 ── -->
         <div class="mt-8">
-
-          <!-- 헤더 + 생성 버튼 -->
           <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-2">
-              <BrainCircuit class="w-5 h-5 text-blue-600" />
-              <h2 class="text-base font-black text-gray-900">AI 소비 리포트</h2>
-              <span class="text-xs font-bold text-white bg-blue-600 px-2 py-0.5 rounded-full">Gemini</span>
+              <BrainCircuit class="w-5 h-5" style="color:#57E0C3" />
+              <h2 class="font-black" style="font-size:1rem;color:#0F122B">AI 소비 리포트</h2>
+              <span class="font-bold px-2 py-0.5 rounded-full" style="font-size:0.72rem;background:#DFFAF4;color:#0D9B7A">Gemini</span>
             </div>
             <div class="flex items-center gap-2">
               <button
                 v-if="reportText"
                 @click="downloadPdf"
                 :disabled="pdfLoading"
-                class="flex items-center gap-1.5 px-4 py-2 bg-gray-800 hover:bg-gray-900 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-colors"
+                class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-50"
+                style="background:#0F122B;color:white"
               >
                 <Loader2 v-if="pdfLoading" class="w-3.5 h-3.5 animate-spin" />
                 <FileDown v-else class="w-3.5 h-3.5" />
@@ -626,7 +613,8 @@ function heatText(intensity) { return intensity > 0.5 ? '#fff' : '#374151' }
               <button
                 @click="generateReport"
                 :disabled="reportLoading || !stats"
-                class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-700 to-indigo-600 hover:from-blue-800 hover:to-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-sm"
+                class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+                style="background:#57E0C3;color:#0F122B"
               >
                 <Loader2 v-if="reportLoading" class="w-3.5 h-3.5 animate-spin" />
                 <Sparkles v-else class="w-3.5 h-3.5" />
@@ -635,39 +623,35 @@ function heatText(intensity) { return intensity > 0.5 ? '#fff' : '#374151' }
             </div>
           </div>
 
-          <!-- 오류 -->
-          <div v-if="reportError" class="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm mb-4">
+          <div v-if="reportError" class="flex items-center gap-2 p-3 rounded-xl text-sm mb-4" style="background:#FFF5F5;border:1px solid #FFD0D0;color:#E5323B">
             <CircleAlert class="w-4 h-4 flex-shrink-0" />{{ reportError }}
           </div>
 
-          <!-- 로딩 상태 -->
-          <div v-if="reportLoading" class="bg-white border border-blue-100 rounded-2xl p-8 text-center">
-            <Loader2 class="w-8 h-8 animate-spin text-blue-500 mx-auto mb-3" />
-            <p class="text-sm font-semibold text-gray-500">Gemini AI가 소비 패턴을 분석하고 있습니다...</p>
-            <p class="text-xs text-gray-400 mt-1">약 10~20초 소요됩니다</p>
+          <div v-if="reportLoading" class="rounded-2xl p-8 text-center" style="background:white;border:1px solid #EEF1F5">
+            <Loader2 class="w-8 h-8 animate-spin mx-auto mb-3" style="color:#57E0C3" />
+            <p class="font-semibold text-sm" style="color:#6F7485">Gemini AI가 소비 패턴을 분석하고 있습니다...</p>
+            <p class="mt-1" style="font-size:0.75rem;color:#6F7485">약 10~20초 소요됩니다</p>
           </div>
 
-          <!-- 리포트 결과 -->
           <div v-else-if="reportSections.length" class="space-y-3">
             <div
               v-for="sec in reportSections" :key="sec.title"
-              class="bg-white border border-blue-100 rounded-2xl overflow-hidden shadow-sm"
+              class="rounded-2xl overflow-hidden"
+              style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)"
             >
-              <div class="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
+              <div class="flex items-center gap-2 px-5 py-3" style="background:#F8F9FF;border-bottom:1px solid #EEF1F5">
                 <span class="text-base">{{ SECTION_ICONS[sec.title] ?? '✦' }}</span>
-                <h3 class="text-sm font-black text-blue-900">{{ sec.title }}</h3>
+                <h3 class="font-black text-sm" style="color:#0F122B">{{ sec.title }}</h3>
               </div>
-              <div class="px-5 py-4 text-sm text-gray-700 leading-relaxed whitespace-pre-line">{{ sec.content }}</div>
+              <div class="px-5 py-4 text-sm leading-relaxed whitespace-pre-line" style="color:#0F122B">{{ sec.content }}</div>
             </div>
           </div>
 
-          <!-- 빈 상태 -->
-          <div v-else-if="!reportLoading && !reportError" class="bg-white border border-dashed border-blue-200 rounded-2xl p-10 text-center">
-            <BrainCircuit class="w-10 h-10 text-blue-200 mx-auto mb-3" />
-            <p class="text-sm font-semibold text-gray-400">AI 리포트 생성 버튼을 눌러</p>
-            <p class="text-sm text-gray-400">현재 기간의 소비 인사이트를 확인하세요.</p>
+          <div v-else-if="!reportLoading && !reportError" class="rounded-2xl p-10 text-center" style="background:white;border:2px dashed #EEF1F5">
+            <BrainCircuit class="w-10 h-10 mx-auto mb-3" style="color:#EEF1F5" />
+            <p class="font-semibold text-sm" style="color:#6F7485">AI 리포트 생성 버튼을 눌러</p>
+            <p class="text-sm" style="color:#6F7485">현재 기간의 소비 인사이트를 확인하세요.</p>
           </div>
-
         </div>
 
       </template>

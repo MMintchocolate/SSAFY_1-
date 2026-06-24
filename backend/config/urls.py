@@ -15,5 +15,6 @@ urlpatterns = [
     path('api/news/',    include('news.urls')),
     path('api/stocks/',     include('stocks.urls')),
     path('api/community/', include('community.urls')),
-    path('api/chat/',     include('chatbot.urls')),
+    path('api/chat/',      include('chatbot.urls')),
+    path('api/portfolio/', include('portfolio.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

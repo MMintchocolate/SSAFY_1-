@@ -10,6 +10,7 @@ urlpatterns = [
     path('ml/predict/',              ml_views.ml_predict),
     path('ml/explain/',              ml_views.ml_explain),
     path('ml/status/',               ml_views.ml_status),
+    path('ml/saved/',                ml_views.ml_saved),
     path('stock-name/',               views.receive_stock_name),
     path('watchlist/',                views.watchlist),
     path('watchlist/<str:symbol>/',   views.watchlist_delete),

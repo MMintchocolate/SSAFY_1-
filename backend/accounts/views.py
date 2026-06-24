@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError
@@ -16,6 +17,48 @@ from .models import User
 from .serializers import RegisterSerializer, UserSerializer, NicknameUpdateSerializer
 
 FRONTEND_URL = 'http://localhost:5173'
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def google_login(request):
+    credential = request.data.get('credential')
+    if not credential:
+        return Response({'error': 'credential이 없습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        from google.oauth2 import id_token
+        from google.auth.transport import requests as google_requests
+        idinfo = id_token.verify_oauth2_token(
+            credential,
+            google_requests.Request(),
+            settings.GOOGLE_CLIENT_ID,
+        )
+    except ValueError:
+        return Response({'error': '유효하지 않은 Google 토큰입니다.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    email       = idinfo['email']
+    google_name = idinfo.get('name', '')
+
+    # 이미 같은 이메일로 등록된 계정이 있으면 재사용
+    user = User.objects.filter(email=email).first()
+    if user is None:
+        # 닉네임 후보: Google 이름 → 이메일 앞부분
+        base_nick = (google_name or email.split('@')[0])[:28]
+        nick = base_nick
+        counter = 1
+        while User.objects.filter(nickname=nick).exists():
+            nick = f'{base_nick}{counter}'
+            counter += 1
+
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            password=None,   # 소셜 로그인 계정은 비밀번호 없음
+            nickname=nick,
+        )
+
+    return Response(_token_pair(user))
 
 
 def _token_pair(user):

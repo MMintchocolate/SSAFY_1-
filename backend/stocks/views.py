@@ -497,7 +497,7 @@ def index_data(request):
 
 @api_view(['GET'])
 def market_movers(request):
-    """홈 화면: 거래량·상승·하락 TOP5 한 번에"""
+    """홈 화면: 시가총액·상승·하락 TOP5 한 번에"""
     global _vol_top_df, _vol_top_ts
 
     now = datetime.now()
@@ -509,8 +509,8 @@ def market_movers(request):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     df = _vol_top_df
-    vol_col = next((c for c in ['Volume', 'volume'] if c in df.columns), None)
     chg_col = next((c for c in ['ChagesRatio', 'ChangesRatio'] if c in df.columns), None)
+    marcap_col = 'Marcap' if 'Marcap' in df.columns else None
 
     def sf(v):
         try:
@@ -523,19 +523,20 @@ def market_movers(request):
         code   = str(row.get('Code', '')).zfill(6)
         mkt    = str(row.get('Market', ''))
         suffix = '.KS' if 'KOSPI' in mkt.upper() else '.KQ'
+        marcap = row.get('Marcap')
         return {
             'symbol':     f"{code}{suffix}",
             'name':       str(row.get('Name', '')),
             'close':      sf(row.get('Close')),
             'change_pct': sf(row.get(chg_col)) if chg_col else None,
-            'volume':     int(row.get(vol_col, 0)) if vol_col and row.get(vol_col) is not None else 0,
+            'marcap':     int(marcap) if marcap is not None and not math.isnan(float(marcap)) else 0,
         }
 
-    result = {'volume': [], 'up': [], 'down': []}
+    result = {'marcap': [], 'up': [], 'down': []}
 
-    if vol_col:
-        vdf = df[df[vol_col].notna() & (df[vol_col] > 0)]
-        result['volume'] = [to_dict(r) for _, r in vdf.sort_values(vol_col, ascending=False).head(5).iterrows()]
+    if marcap_col:
+        mdf = df[df[marcap_col].notna() & (df[marcap_col] > 0)]
+        result['marcap'] = [to_dict(r) for _, r in mdf.sort_values(marcap_col, ascending=False).head(5).iterrows()]
 
     if chg_col:
         cdf = df[df[chg_col].notna()]

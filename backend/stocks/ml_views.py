@@ -8,7 +8,8 @@ import numpy as np
 import yfinance as yf
 from django.conf import settings
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
 MODEL_DIR = Path(__file__).resolve().parent.parent / 'ml_models'
@@ -195,7 +196,7 @@ def ml_train(request):
 
 @api_view(['GET'])
 def ml_predict(request):
-    """GET /api/stocks/ml/predict/?symbol=TSLA"""
+    """GET /api/stocks/ml/predict/?symbol=TSLA  — 예측 후 로그인 유저면 DB에 저장"""
     symbol = request.GET.get('symbol', '').strip().upper()
     if not symbol:
         return Response({'error': 'symbol 파라미터가 필요합니다.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -225,13 +226,29 @@ def ml_predict(request):
 
         label_map  = {0: '관망', 1: '매수', 2: '매도/보류'}
         proba_dict = {c: round(p, 4) for c, p in zip(classes, proba)}
+        latest_date = str(base.index[-1].date())
+
+        # ── 로그인 유저면 DB에 저장 ────────────────────────────────
+        if request.user and request.user.is_authenticated:
+            from .models import UserPredictionCache
+            UserPredictionCache.objects.update_or_create(
+                user=request.user, symbol=symbol,
+                defaults={
+                    'signal':       pred,
+                    'signal_label': label_map.get(pred, '?'),
+                    'prob_hold':    proba_dict.get(0, 0),
+                    'prob_buy':     proba_dict.get(1, 0),
+                    'prob_sell':    proba_dict.get(2, 0),
+                    'latest_date':  latest_date,
+                }
+            )
 
         return Response({
             'symbol':        symbol,
             'signal':        pred,
             'signal_label':  label_map.get(pred, '?'),
             'probabilities': proba_dict,
-            'latest_date':   str(base.index[-1].date()),
+            'latest_date':   latest_date,
             'predicted_at':  datetime.now().strftime('%Y-%m-%d %H:%M'),
         })
 
@@ -358,6 +375,22 @@ def ml_explain(request):
     except Exception as e:
         return Response({'error': f'AI 설명 생성 실패: {e}'}, status=502)
 
+    # ── 로그인 유저면 AI 설명도 DB에 저장 ────────────────────────
+    if request.user and request.user.is_authenticated:
+        from .models import UserPredictionCache
+        UserPredictionCache.objects.update_or_create(
+            user=request.user, symbol=symbol,
+            defaults={
+                'signal':       pred,
+                'signal_label': signal_label,
+                'prob_hold':    proba_dict.get(0, 0),
+                'prob_buy':     proba_dict.get(1, 0),
+                'prob_sell':    proba_dict.get(2, 0),
+                'latest_date':  str(base.index[-1].date()),
+                'explanation':  explanation,
+            }
+        )
+
     return Response({
         'symbol':        symbol,
         'signal':        pred,
@@ -367,6 +400,26 @@ def ml_explain(request):
         'latest_date':   str(base.index[-1].date()),
         'explanation':   explanation,
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def ml_saved(request):
+    """GET /api/stocks/ml/saved/  — 로그인 유저의 저장된 예측 목록"""
+    from .models import UserPredictionCache
+    items = UserPredictionCache.objects.filter(user=request.user)
+    data = []
+    for item in items:
+        data.append({
+            'symbol':        item.symbol,
+            'signal':        item.signal,
+            'signal_label':  item.signal_label,
+            'probabilities': {0: item.prob_hold, 1: item.prob_buy, 2: item.prob_sell},
+            'latest_date':   item.latest_date,
+            'predicted_at':  item.predicted_at.strftime('%Y-%m-%d %H:%M'),
+            'explanation':   item.explanation,
+        })
+    return Response(data)
 
 
 @api_view(['GET'])

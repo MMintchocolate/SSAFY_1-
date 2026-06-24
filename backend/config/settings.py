@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'stocks',
     'community',
     'chatbot',
+    'portfolio',
 ]
 
 MIDDLEWARE = [
@@ -95,6 +96,8 @@ MEDIA_ROOT = BASE_DIR / 'media'
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
+    'https://localhost:5173',
+    'https://192.168.35.165:5173',
 ]
 
 # FSS API
@@ -147,6 +150,9 @@ NAVER_SEARCH_CLIENT_SECRET = os.environ.get('NAVER_SEARCH_CLIENT_SECRET', '')
 FIXTURE_DIRS = [
     os.path.join(BASE_DIR, 'fixtures'),
 ]
+
+# Google OAuth2
+GOOGLE_CLIENT_ID = '928012216108-cr35gr1rss0phgu13ka6r7tcg0qf3noc.apps.googleusercontent.com'
 
 # Gmail SMTP
 EMAIL_BACKEND       = 'django.core.mail.backends.smtp.EmailBackend'

@@ -46,32 +46,10 @@ async function generateAiAnalysis() {
   }
 }
 
-// ML 예측 근거
-const mlResult   = ref(null)   // { signal, signal_label, probabilities, explanation }
-const mlLoading  = ref(false)
-const mlError    = ref('')
-
-async function generateMlExplain() {
-  if (!selected.value) return
-  mlLoading.value = true
-  mlError.value   = ''
-  mlResult.value  = null
-  try {
-    const res  = await authFetch(`${API}/ml/explain/?symbol=${selected.value.symbol}`)
-    const data = await res.json()
-    if (!res.ok || data.error) throw new Error(data.error || 'ML 분석 실패')
-    mlResult.value = data
-  } catch (e) {
-    mlError.value = e.message
-  } finally {
-    mlLoading.value = false
-  }
-}
-
 // 종목 변경 시 분석 초기화
 function resetAi() {
-  aiText.value  = ''; aiError.value  = ''
-  mlResult.value = null; mlError.value = ''
+  aiText.value = ''
+  aiError.value = ''
 }
 
 // 각 지표 설명 토글
@@ -195,390 +173,322 @@ onMounted(loadWatchlist)
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-white" style="font-family:'Pretendard','Noto Sans KR',sans-serif">
     <NavBar />
 
     <main class="pt-16">
-      <!-- Header -->
-      <div class="bg-white border-b border-gray-100">
+      <!-- 헤더 -->
+      <div style="background:linear-gradient(90deg,#fffdf9 0%,#ffffff 50%,#f2fffb 100%);border-bottom:1px solid #EEF1F5">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 py-10">
-          <div class="inline-flex items-center gap-2 bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1.5 rounded-full mb-3 uppercase tracking-widest border border-blue-100">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold mb-3" style="background:#DFFAF4;color:#0D9B7A;font-size:0.72rem">
             <Activity class="w-3 h-3" />기술적 분석
           </div>
-          <h1 class="text-3xl font-extrabold text-gray-900 mb-1">매수 타이밍 지표</h1>
-          <p class="text-gray-400">관심 종목의 MA · RSI · MACD · 볼린저 밴드를 한눈에</p>
+          <h1 class="font-black mb-1" style="font-size:1.8rem;color:#0F122B">매수 타이밍 지표</h1>
+          <p style="color:#6F7485;font-size:0.9rem">관심 종목의 MA · RSI · MACD · 볼린저 밴드를 한눈에</p>
         </div>
       </div>
 
       <div class="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex gap-6">
 
-        <!-- ── 왼쪽: 관심종목 목록 ── -->
+        <!-- 왼쪽: 관심종목 목록 -->
         <aside class="w-56 flex-shrink-0">
-          <div class="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm sticky top-20">
+          <div class="rounded-2xl p-4 sticky top-20" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
             <div class="flex items-center gap-2 mb-3">
-              <Star class="w-4 h-4 text-amber-400 fill-amber-400" />
-              <span class="text-sm font-bold text-gray-900">관심 종목</span>
-              <span class="ml-auto text-xs text-gray-400">{{ watchlist.length }}개</span>
+              <Star class="w-4 h-4 fill-amber-400 text-amber-400" />
+              <span class="text-sm font-bold" style="color:#0F122B">관심 종목</span>
+              <span class="ml-auto font-medium" style="font-size:0.72rem;color:#6F7485">{{ watchlist.length }}개</span>
             </div>
 
             <div v-if="watchlist.length === 0" class="text-center py-6">
-              <Star class="w-7 h-7 text-gray-200 fill-gray-200 mx-auto mb-2" />
-              <p class="text-xs text-gray-400">관심 종목이 없습니다<br>주식 페이지에서 추가하세요</p>
+              <Star class="w-7 h-7 mx-auto mb-2" style="color:#EEF1F5;fill:#EEF1F5" />
+              <p style="font-size:0.72rem;color:#6F7485">관심 종목이 없습니다<br>주식 페이지에서 추가하세요</p>
             </div>
 
             <div v-else class="space-y-1">
               <button
-                v-for="item in watchlist"
-                :key="item.symbol"
+                v-for="item in watchlist" :key="item.symbol"
                 @click="selectStock(item)"
                 class="w-full flex items-center gap-2.5 p-2.5 rounded-xl text-left transition-all"
-                :class="selected?.symbol === item.symbol
-                  ? 'bg-blue-50 border border-blue-200'
-                  : 'hover:bg-gray-50 border border-transparent'"
+                :style="selected?.symbol === item.symbol
+                  ? 'background:#DFFAF4;border:1px solid #57E0C3'
+                  : 'border:1px solid transparent'"
               >
-                <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-600 to-blue-900 flex items-center justify-center text-white text-xs font-black flex-shrink-0">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center font-black flex-shrink-0" style="background:#0F122B;color:white;font-size:0.65rem">
                   {{ item.symbol.slice(0, 3) }}
                 </div>
                 <div class="min-w-0">
-                  <p class="text-xs font-bold text-gray-900 truncate">{{ item.name }}</p>
-                  <p class="text-xs text-gray-400 truncate">{{ item.symbol }}</p>
+                  <p class="font-bold truncate" style="font-size:0.72rem;color:#0F122B">{{ item.name }}</p>
+                  <p class="truncate" style="font-size:0.72rem;color:#6F7485">{{ item.symbol }}</p>
                 </div>
               </button>
             </div>
           </div>
         </aside>
 
-        <!-- ── 오른쪽: 지표 패널 ── -->
+        <!-- 오른쪽: 지표 패널 -->
         <div class="flex-1 min-w-0">
 
           <!-- 미선택 -->
-          <div v-if="!selected" class="bg-white rounded-2xl border border-gray-100 p-16 text-center shadow-sm">
-            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center mx-auto mb-4">
-              <Activity class="w-8 h-8 text-blue-500" />
+          <div v-if="!selected" class="rounded-2xl p-16 text-center" style="background:white;border:1px solid #EEF1F5">
+            <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style="background:#DFFAF4">
+              <Activity class="w-8 h-8" style="color:#57E0C3" />
             </div>
-            <p class="font-bold text-gray-900 mb-1">왼쪽 관심 종목을 선택하세요</p>
-            <p class="text-sm text-gray-400">4가지 기술 지표가 표시됩니다</p>
+            <p class="font-bold mb-1" style="color:#0F122B">왼쪽 관심 종목을 선택하세요</p>
+            <p class="text-sm" style="color:#6F7485">4가지 기술 지표가 표시됩니다</p>
           </div>
 
           <!-- 로딩 -->
-          <div v-else-if="loading" class="bg-white rounded-2xl border border-gray-100 p-16 text-center shadow-sm">
-            <RefreshCw class="w-8 h-8 text-blue-400 animate-spin mx-auto mb-3" />
-            <p class="text-sm text-gray-400">지표 계산 중...</p>
+          <div v-else-if="loading" class="rounded-2xl p-16 text-center" style="background:white;border:1px solid #EEF1F5">
+            <RefreshCw class="w-8 h-8 animate-spin mx-auto mb-3" style="color:#57E0C3" />
+            <p class="text-sm" style="color:#6F7485">지표 계산 중...</p>
           </div>
 
           <!-- 에러 -->
-          <div v-else-if="error" class="bg-white rounded-2xl border border-red-100 p-10 text-center shadow-sm">
-            <AlertCircle class="w-8 h-8 text-red-400 mx-auto mb-3" />
-            <p class="font-semibold text-red-600">{{ error }}</p>
+          <div v-else-if="error" class="rounded-2xl p-10 text-center" style="background:white;border:1px solid #FFD0D0">
+            <AlertCircle class="w-8 h-8 mx-auto mb-3" style="color:#E5323B" />
+            <p class="font-semibold" style="color:#E5323B">{{ error }}</p>
           </div>
 
           <!-- 지표 결과 -->
           <div v-else-if="indicators" class="space-y-4">
 
             <!-- 종목 헤더 -->
-            <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm flex items-center gap-4">
-              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center text-white text-sm font-black">
+            <div class="rounded-2xl p-5 flex items-center gap-4" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
+              <div class="w-12 h-12 rounded-xl flex items-center justify-center font-black" style="background:#0F122B;color:white;font-size:0.85rem">
                 {{ selected.symbol.slice(0, 4) }}
               </div>
               <div>
-                <p class="text-xs text-gray-400">{{ selected.name }}</p>
-                <p class="text-lg font-extrabold text-gray-900">{{ selected.symbol }}</p>
+                <p style="font-size:0.72rem;color:#6F7485">{{ selected.name }}</p>
+                <p class="font-extrabold" style="font-size:1.1rem;color:#0F122B">{{ selected.symbol }}</p>
               </div>
               <div class="ml-auto text-right">
-                <p class="text-xs text-gray-400 mb-0.5">현재가</p>
-                <p class="text-2xl font-black tabular-nums text-gray-900">{{ indicators.price?.toLocaleString() }}</p>
+                <p class="mb-0.5" style="font-size:0.72rem;color:#6F7485">현재가</p>
+                <p class="font-black tabular-nums" style="font-size:1.5rem;color:#0F122B">{{ indicators.price?.toLocaleString() }}</p>
               </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-              <!-- ── MA ── -->
-              <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+              <!-- MA -->
+              <div class="rounded-2xl p-5" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
                 <div class="flex items-center gap-2 mb-1">
-                  <TrendingUp class="w-4 h-4 text-blue-500" />
-                  <h3 class="font-bold text-gray-900 text-sm">이동평균선 (MA)</h3>
-                  <span v-if="indicators.ma.cross"
-                    class="text-xs font-bold px-2 py-0.5 rounded-full border"
-                    :class="signalClass(indicators.ma.cross)"
-                  >{{ signalLabel(indicators.ma.cross) }}</span>
-                  <button @click="infoOpen.ma = !infoOpen.ma"
-                    class="ml-auto flex items-center gap-0.5 text-xs text-gray-400 hover:text-blue-500 transition-colors"
-                  >
+                  <TrendingUp class="w-4 h-4" style="color:#57E0C3" />
+                  <h3 class="font-bold text-sm" style="color:#0F122B">이동평균선 (MA)</h3>
+                  <span v-if="indicators.ma.cross" class="text-xs font-bold px-2 py-0.5 rounded-full border" :class="signalClass(indicators.ma.cross)">{{ signalLabel(indicators.ma.cross) }}</span>
+                  <button @click="infoOpen.ma = !infoOpen.ma" class="ml-auto flex items-center gap-0.5 transition-colors" style="font-size:0.72rem;color:#6F7485">
                     <HelpCircle class="w-4 h-4" />
                     <ChevronDown class="w-3 h-3 transition-transform" :class="{ 'rotate-180': infoOpen.ma }" />
                   </button>
                 </div>
-                <!-- 설명 패널 -->
-                <div v-if="infoOpen.ma" class="mb-4 p-3 bg-blue-50 rounded-xl border border-blue-100 text-xs text-blue-800 space-y-2">
-                  <p class="font-bold text-blue-900">{{ INFO.ma.title }}</p>
-                  <p class="text-blue-700 leading-relaxed">{{ INFO.ma.desc }}</p>
+                <div v-if="infoOpen.ma" class="mb-4 p-3 rounded-xl space-y-2" style="background:#F8F9FF;border:1px solid #EEF1F5;font-size:0.72rem">
+                  <p class="font-bold" style="color:#0F122B">{{ INFO.ma.title }}</p>
+                  <p class="leading-relaxed" style="color:#6F7485">{{ INFO.ma.desc }}</p>
                   <ul class="space-y-1 mt-2">
                     <li v-for="i in INFO.ma.items" :key="i.label" class="flex gap-2">
-                      <span class="font-bold whitespace-nowrap text-blue-900">{{ i.label }}</span>
-                      <span class="text-blue-700">→ {{ i.meaning }}</span>
+                      <span class="font-bold whitespace-nowrap" style="color:#0F122B">{{ i.label }}</span>
+                      <span style="color:#6F7485">→ {{ i.meaning }}</span>
                     </li>
                   </ul>
                 </div>
-                <div class="mt-3"></div>
-
-                <div class="space-y-3">
-                  <!-- 현재가 -->
-                  <div class="flex justify-between items-center py-2 border-b border-gray-50">
-                    <span class="text-xs text-gray-500 font-medium">현재가</span>
-                    <span class="text-sm font-bold text-gray-900 tabular-nums">{{ indicators.price?.toLocaleString() }}</span>
+                <div class="mt-3 space-y-3">
+                  <div class="flex justify-between items-center py-2" style="border-bottom:1px solid #EEF1F5">
+                    <span class="font-medium" style="font-size:0.72rem;color:#6F7485">현재가</span>
+                    <span class="text-sm font-bold tabular-nums" style="color:#0F122B">{{ indicators.price?.toLocaleString() }}</span>
                   </div>
-                  <!-- MA50 -->
-                  <div class="flex justify-between items-center py-2 border-b border-gray-50">
-                    <span class="text-xs text-gray-500 font-medium">MA 50일</span>
+                  <div class="flex justify-between items-center py-2" style="border-bottom:1px solid #EEF1F5">
+                    <span class="font-medium" style="font-size:0.72rem;color:#6F7485">MA 50일</span>
                     <div class="flex items-center gap-2">
-                      <span class="text-sm font-bold tabular-nums"
-                        :class="indicators.price > indicators.ma.ma50 ? 'text-emerald-600' : 'text-red-500'"
-                      >{{ fmt(indicators.ma.ma50) }}</span>
-                      <TrendingUp v-if="indicators.price > indicators.ma.ma50" class="w-3 h-3 text-emerald-500" />
-                      <TrendingDown v-else class="w-3 h-3 text-red-500" />
+                      <span class="text-sm font-bold tabular-nums" :style="indicators.price > indicators.ma.ma50 ? 'color:#E5323B' : 'color:#3B7FED'">{{ fmt(indicators.ma.ma50) }}</span>
+                      <TrendingUp v-if="indicators.price > indicators.ma.ma50" class="w-3 h-3" style="color:#E5323B" />
+                      <TrendingDown v-else class="w-3 h-3" style="color:#3B7FED" />
                     </div>
                   </div>
-                  <!-- MA200 -->
                   <div class="flex justify-between items-center py-2">
-                    <span class="text-xs text-gray-500 font-medium">MA 200일</span>
+                    <span class="font-medium" style="font-size:0.72rem;color:#6F7485">MA 200일</span>
                     <div class="flex items-center gap-2">
-                      <span v-if="indicators.ma.ma200" class="text-sm font-bold tabular-nums"
-                        :class="indicators.price > indicators.ma.ma200 ? 'text-emerald-600' : 'text-red-500'"
-                      >{{ fmt(indicators.ma.ma200) }}</span>
-                      <span v-else class="text-sm text-gray-400">데이터 부족</span>
-                      <TrendingUp v-if="indicators.ma.ma200 && indicators.price > indicators.ma.ma200" class="w-3 h-3 text-emerald-500" />
-                      <TrendingDown v-else-if="indicators.ma.ma200" class="w-3 h-3 text-red-500" />
+                      <span v-if="indicators.ma.ma200" class="text-sm font-bold tabular-nums" :style="indicators.price > indicators.ma.ma200 ? 'color:#E5323B' : 'color:#3B7FED'">{{ fmt(indicators.ma.ma200) }}</span>
+                      <span v-else class="text-sm" style="color:#6F7485">데이터 부족</span>
+                      <TrendingUp v-if="indicators.ma.ma200 && indicators.price > indicators.ma.ma200" class="w-3 h-3" style="color:#E5323B" />
+                      <TrendingDown v-else-if="indicators.ma.ma200" class="w-3 h-3" style="color:#3B7FED" />
                     </div>
                   </div>
                 </div>
-
                 <div class="mt-4 p-3 rounded-xl text-xs font-medium"
-                  :class="indicators.ma.above200 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'"
-                >
-                  {{ indicators.ma.above200 ? '📈 MA50이 MA200 위 — 장기 상승 추세' : '📉 MA50이 MA200 아래 — 장기 하락 추세' }}
-                </div>
+                  :style="indicators.ma.above200 ? 'background:#DFFAF4;color:#0D9B7A' : 'background:#FFF5F5;color:#E5323B'"
+                >{{ indicators.ma.above200 ? '📈 MA50이 MA200 위 — 장기 상승 추세' : '📉 MA50이 MA200 아래 — 장기 하락 추세' }}</div>
               </div>
 
-              <!-- ── RSI ── -->
-              <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+              <!-- RSI -->
+              <div class="rounded-2xl p-5" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
                 <div class="flex items-center gap-2 mb-1">
-                  <Activity class="w-4 h-4 text-purple-500" />
-                  <h3 class="font-bold text-gray-900 text-sm">RSI (14일)</h3>
-                  <span class="text-xs font-bold px-2 py-0.5 rounded-full border"
-                    :class="signalClass(indicators.rsi.signal)"
-                  >{{ signalLabel(indicators.rsi.signal) }}</span>
-                  <button @click="infoOpen.rsi = !infoOpen.rsi"
-                    class="ml-auto flex items-center gap-0.5 text-xs text-gray-400 hover:text-purple-500 transition-colors"
-                  >
+                  <Activity class="w-4 h-4" style="color:#57E0C3" />
+                  <h3 class="font-bold text-sm" style="color:#0F122B">RSI (14일)</h3>
+                  <span class="text-xs font-bold px-2 py-0.5 rounded-full border" :class="signalClass(indicators.rsi.signal)">{{ signalLabel(indicators.rsi.signal) }}</span>
+                  <button @click="infoOpen.rsi = !infoOpen.rsi" class="ml-auto flex items-center gap-0.5 transition-colors" style="font-size:0.72rem;color:#6F7485">
                     <HelpCircle class="w-4 h-4" />
                     <ChevronDown class="w-3 h-3 transition-transform" :class="{ 'rotate-180': infoOpen.rsi }" />
                   </button>
                 </div>
-                <div v-if="infoOpen.rsi" class="mb-4 p-3 bg-purple-50 rounded-xl border border-purple-100 text-xs text-purple-800 space-y-2">
-                  <p class="font-bold text-purple-900">{{ INFO.rsi.title }}</p>
-                  <p class="text-purple-700 leading-relaxed">{{ INFO.rsi.desc }}</p>
+                <div v-if="infoOpen.rsi" class="mb-4 p-3 rounded-xl space-y-2" style="background:#F8F9FF;border:1px solid #EEF1F5;font-size:0.72rem">
+                  <p class="font-bold" style="color:#0F122B">{{ INFO.rsi.title }}</p>
+                  <p class="leading-relaxed" style="color:#6F7485">{{ INFO.rsi.desc }}</p>
                   <ul class="space-y-1 mt-2">
                     <li v-for="i in INFO.rsi.items" :key="i.label" class="flex gap-2">
-                      <span class="font-bold whitespace-nowrap text-purple-900">{{ i.label }}</span>
-                      <span class="text-purple-700">→ {{ i.meaning }}</span>
+                      <span class="font-bold whitespace-nowrap" style="color:#0F122B">{{ i.label }}</span>
+                      <span style="color:#6F7485">→ {{ i.meaning }}</span>
                     </li>
                   </ul>
                 </div>
-                <div class="mt-3"></div>
-
-                <!-- RSI 게이지 -->
-                <div class="mb-4">
-                  <div class="flex justify-between text-xs text-gray-400 mb-1">
+                <div class="mt-3 mb-4">
+                  <div class="flex justify-between mb-1" style="font-size:0.72rem;color:#6F7485">
                     <span>0</span><span>30</span><span>70</span><span>100</span>
                   </div>
                   <div class="relative h-4 rounded-full overflow-hidden flex">
-                    <div class="w-[30%] bg-emerald-100"></div>
-                    <div class="w-[40%] bg-gray-100"></div>
-                    <div class="w-[30%] bg-red-100"></div>
-                    <!-- 포인터 -->
-                    <div
-                      class="absolute top-0 bottom-0 w-1 bg-gray-800 rounded-full shadow"
-                      :style="{ left: `calc(${indicators.rsi.value}% - 2px)` }"
-                    ></div>
+                    <div class="w-[30%]" style="background:#DFFAF4"></div>
+                    <div class="w-[40%]" style="background:#EEF1F5"></div>
+                    <div class="w-[30%]" style="background:#FFF5F5"></div>
+                    <div class="absolute top-0 bottom-0 w-1 rounded-full shadow" style="background:#0F122B" :style="{ left: `calc(${indicators.rsi.value}% - 2px)` }"></div>
                   </div>
-                  <div class="flex justify-between text-xs mt-1 text-gray-400">
-                    <span class="text-emerald-600 font-semibold">과매도</span>
-                    <span>중립</span>
-                    <span class="text-red-500 font-semibold">과매수</span>
+                  <div class="flex justify-between mt-1" style="font-size:0.72rem">
+                    <span class="font-semibold" style="color:#0D9B7A">과매도</span>
+                    <span style="color:#6F7485">중립</span>
+                    <span class="font-semibold" style="color:#E5323B">과매수</span>
                   </div>
                 </div>
-
                 <div class="text-center">
-                  <span class="text-4xl font-black tabular-nums"
-                    :class="indicators.rsi.signal === 'oversold' ? 'text-emerald-600'
-                           : indicators.rsi.signal === 'overbought' ? 'text-red-600'
-                           : 'text-gray-800'"
+                  <span class="font-black tabular-nums" style="font-size:2.4rem"
+                    :style="indicators.rsi.signal === 'oversold' ? 'color:#0D9B7A' : indicators.rsi.signal === 'overbought' ? 'color:#E5323B' : 'color:#0F122B'"
                   >{{ fmt(indicators.rsi.value) }}</span>
                 </div>
-
-                <div class="mt-4 p-3 rounded-xl bg-gray-50 text-xs text-gray-600">
+                <div class="mt-4 p-3 rounded-xl text-xs" style="background:#F8F9FF;color:#6F7485">
                   RSI {{ fmt(indicators.rsi.value) }} —
-                  <span v-if="indicators.rsi.signal === 'oversold'" class="text-emerald-700 font-semibold">30 미만: 과매도 구간, 반등 가능성</span>
-                  <span v-else-if="indicators.rsi.signal === 'overbought'" class="text-red-600 font-semibold">70 초과: 과매수 구간, 조정 가능성</span>
-                  <span v-else class="text-gray-500">중립 구간 (30~70)</span>
+                  <span v-if="indicators.rsi.signal === 'oversold'" class="font-semibold" style="color:#0D9B7A">30 미만: 과매도 구간, 반등 가능성</span>
+                  <span v-else-if="indicators.rsi.signal === 'overbought'" class="font-semibold" style="color:#E5323B">70 초과: 과매수 구간, 조정 가능성</span>
+                  <span v-else>중립 구간 (30~70)</span>
                 </div>
               </div>
 
-              <!-- ── MACD ── -->
-              <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+              <!-- MACD -->
+              <div class="rounded-2xl p-5" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
                 <div class="flex items-center gap-2 mb-1">
-                  <BarChart2 class="w-4 h-4 text-indigo-500" />
-                  <h3 class="font-bold text-gray-900 text-sm">MACD (12, 26, 9)</h3>
-                  <span v-if="indicators.macd.cross"
-                    class="text-xs font-bold px-2 py-0.5 rounded-full border"
-                    :class="signalClass(indicators.macd.cross)"
-                  >{{ indicators.macd.cross === 'buy' ? '매수 크로스' : '매도 크로스' }}</span>
-                  <button @click="infoOpen.macd = !infoOpen.macd"
-                    class="ml-auto flex items-center gap-0.5 text-xs text-gray-400 hover:text-indigo-500 transition-colors"
-                  >
+                  <BarChart2 class="w-4 h-4" style="color:#57E0C3" />
+                  <h3 class="font-bold text-sm" style="color:#0F122B">MACD (12, 26, 9)</h3>
+                  <span v-if="indicators.macd.cross" class="text-xs font-bold px-2 py-0.5 rounded-full border" :class="signalClass(indicators.macd.cross)">{{ indicators.macd.cross === 'buy' ? '매수 크로스' : '매도 크로스' }}</span>
+                  <button @click="infoOpen.macd = !infoOpen.macd" class="ml-auto flex items-center gap-0.5 transition-colors" style="font-size:0.72rem;color:#6F7485">
                     <HelpCircle class="w-4 h-4" />
                     <ChevronDown class="w-3 h-3 transition-transform" :class="{ 'rotate-180': infoOpen.macd }" />
                   </button>
                 </div>
-                <div v-if="infoOpen.macd" class="mb-4 p-3 bg-indigo-50 rounded-xl border border-indigo-100 text-xs text-indigo-800 space-y-2">
-                  <p class="font-bold text-indigo-900">{{ INFO.macd.title }}</p>
-                  <p class="text-indigo-700 leading-relaxed">{{ INFO.macd.desc }}</p>
+                <div v-if="infoOpen.macd" class="mb-4 p-3 rounded-xl space-y-2" style="background:#F8F9FF;border:1px solid #EEF1F5;font-size:0.72rem">
+                  <p class="font-bold" style="color:#0F122B">{{ INFO.macd.title }}</p>
+                  <p class="leading-relaxed" style="color:#6F7485">{{ INFO.macd.desc }}</p>
                   <ul class="space-y-1 mt-2">
                     <li v-for="i in INFO.macd.items" :key="i.label" class="flex gap-2">
-                      <span class="font-bold whitespace-nowrap text-indigo-900">{{ i.label }}</span>
-                      <span class="text-indigo-700">→ {{ i.meaning }}</span>
+                      <span class="font-bold whitespace-nowrap" style="color:#0F122B">{{ i.label }}</span>
+                      <span style="color:#6F7485">→ {{ i.meaning }}</span>
                     </li>
                   </ul>
                 </div>
-                <div class="mt-3"></div>
-
-                <div class="space-y-3">
-                  <div class="flex justify-between items-center py-2 border-b border-gray-50">
-                    <span class="text-xs text-gray-500">MACD선</span>
-                    <span class="text-sm font-bold tabular-nums"
-                      :class="indicators.macd.macd >= 0 ? 'text-emerald-600' : 'text-red-500'"
-                    >{{ fmt(indicators.macd.macd, 4) }}</span>
+                <div class="mt-3 space-y-3">
+                  <div class="flex justify-between items-center py-2" style="border-bottom:1px solid #EEF1F5">
+                    <span style="font-size:0.72rem;color:#6F7485">MACD선</span>
+                    <span class="text-sm font-bold tabular-nums" :style="indicators.macd.macd >= 0 ? 'color:#E5323B' : 'color:#3B7FED'">{{ fmt(indicators.macd.macd, 4) }}</span>
                   </div>
-                  <div class="flex justify-between items-center py-2 border-b border-gray-50">
-                    <span class="text-xs text-gray-500">시그널선</span>
-                    <span class="text-sm font-bold tabular-nums text-gray-700">{{ fmt(indicators.macd.signal, 4) }}</span>
+                  <div class="flex justify-between items-center py-2" style="border-bottom:1px solid #EEF1F5">
+                    <span style="font-size:0.72rem;color:#6F7485">시그널선</span>
+                    <span class="text-sm font-bold tabular-nums" style="color:#0F122B">{{ fmt(indicators.macd.signal, 4) }}</span>
                   </div>
                   <div class="flex justify-between items-center py-2">
-                    <span class="text-xs text-gray-500">히스토그램</span>
-                    <span class="text-sm font-bold tabular-nums"
-                      :class="indicators.macd.histogram >= 0 ? 'text-emerald-600' : 'text-red-500'"
-                    >{{ fmt(indicators.macd.histogram, 4) }}</span>
+                    <span style="font-size:0.72rem;color:#6F7485">히스토그램</span>
+                    <span class="text-sm font-bold tabular-nums" :style="indicators.macd.histogram >= 0 ? 'color:#E5323B' : 'color:#3B7FED'">{{ fmt(indicators.macd.histogram, 4) }}</span>
                   </div>
                 </div>
-
                 <div class="mt-4 p-3 rounded-xl text-xs font-medium"
-                  :class="indicators.macd.macd > indicators.macd.signal ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'"
-                >
-                  {{ indicators.macd.macd > indicators.macd.signal
-                    ? '📈 MACD > 시그널 — 상승 모멘텀'
-                    : '📉 MACD < 시그널 — 하락 모멘텀' }}
-                </div>
+                  :style="indicators.macd.macd > indicators.macd.signal ? 'background:#DFFAF4;color:#0D9B7A' : 'background:#FFF5F5;color:#E5323B'"
+                >{{ indicators.macd.macd > indicators.macd.signal ? '📈 MACD > 시그널 — 상승 모멘텀' : '📉 MACD < 시그널 — 하락 모멘텀' }}</div>
               </div>
 
-              <!-- ── Bollinger ── -->
-              <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+              <!-- 볼린저 밴드 -->
+              <div class="rounded-2xl p-5" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
                 <div class="flex items-center gap-2 mb-1">
-                  <Activity class="w-4 h-4 text-orange-500" />
-                  <h3 class="font-bold text-gray-900 text-sm">볼린저 밴드 (20일)</h3>
-                  <span class="text-xs font-bold px-2 py-0.5 rounded-full border"
-                    :class="signalClass(indicators.bollinger.signal)"
-                  >{{ signalLabel(indicators.bollinger.signal) }}</span>
-                  <button @click="infoOpen.bollinger = !infoOpen.bollinger"
-                    class="ml-auto flex items-center gap-0.5 text-xs text-gray-400 hover:text-orange-500 transition-colors"
-                  >
+                  <Activity class="w-4 h-4" style="color:#FFD76A" />
+                  <h3 class="font-bold text-sm" style="color:#0F122B">볼린저 밴드 (20일)</h3>
+                  <span class="text-xs font-bold px-2 py-0.5 rounded-full border" :class="signalClass(indicators.bollinger.signal)">{{ signalLabel(indicators.bollinger.signal) }}</span>
+                  <button @click="infoOpen.bollinger = !infoOpen.bollinger" class="ml-auto flex items-center gap-0.5 transition-colors" style="font-size:0.72rem;color:#6F7485">
                     <HelpCircle class="w-4 h-4" />
                     <ChevronDown class="w-3 h-3 transition-transform" :class="{ 'rotate-180': infoOpen.bollinger }" />
                   </button>
                 </div>
-                <div v-if="infoOpen.bollinger" class="mb-4 p-3 bg-orange-50 rounded-xl border border-orange-100 text-xs text-orange-800 space-y-2">
-                  <p class="font-bold text-orange-900">{{ INFO.bollinger.title }}</p>
-                  <p class="text-orange-700 leading-relaxed">{{ INFO.bollinger.desc }}</p>
+                <div v-if="infoOpen.bollinger" class="mb-4 p-3 rounded-xl space-y-2" style="background:#F8F9FF;border:1px solid #EEF1F5;font-size:0.72rem">
+                  <p class="font-bold" style="color:#0F122B">{{ INFO.bollinger.title }}</p>
+                  <p class="leading-relaxed" style="color:#6F7485">{{ INFO.bollinger.desc }}</p>
                   <ul class="space-y-1 mt-2">
                     <li v-for="i in INFO.bollinger.items" :key="i.label" class="flex gap-2">
-                      <span class="font-bold whitespace-nowrap text-orange-900">{{ i.label }}</span>
-                      <span class="text-orange-700">→ {{ i.meaning }}</span>
+                      <span class="font-bold whitespace-nowrap" style="color:#0F122B">{{ i.label }}</span>
+                      <span style="color:#6F7485">→ {{ i.meaning }}</span>
                     </li>
                   </ul>
                 </div>
-                <div class="mt-3"></div>
-
-                <div class="space-y-2 mb-4">
+                <div class="mt-3 space-y-2 mb-4">
                   <div class="flex justify-between text-xs">
-                    <span class="text-red-500 font-semibold">상단 밴드</span>
-                    <span class="font-bold tabular-nums text-gray-800">{{ fmt(indicators.bollinger.upper) }}</span>
+                    <span class="font-semibold" style="color:#E5323B">상단 밴드</span>
+                    <span class="font-bold tabular-nums" style="color:#0F122B">{{ fmt(indicators.bollinger.upper) }}</span>
                   </div>
                   <div class="flex justify-between text-xs">
-                    <span class="text-gray-500">중심선 (MA20)</span>
-                    <span class="font-bold tabular-nums text-gray-800">{{ fmt(indicators.bollinger.middle) }}</span>
+                    <span style="color:#6F7485">중심선 (MA20)</span>
+                    <span class="font-bold tabular-nums" style="color:#0F122B">{{ fmt(indicators.bollinger.middle) }}</span>
                   </div>
                   <div class="flex justify-between text-xs">
-                    <span class="text-emerald-600 font-semibold">하단 밴드</span>
-                    <span class="font-bold tabular-nums text-gray-800">{{ fmt(indicators.bollinger.lower) }}</span>
+                    <span class="font-semibold" style="color:#3B7FED">하단 밴드</span>
+                    <span class="font-bold tabular-nums" style="color:#0F122B">{{ fmt(indicators.bollinger.lower) }}</span>
                   </div>
                 </div>
-
-                <!-- 밴드 내 위치 바 -->
                 <div class="mb-3">
-                  <div class="flex justify-between text-xs text-gray-400 mb-1">
-                    <span class="text-emerald-600">하단(매수)</span>
-                    <span>중심</span>
-                    <span class="text-red-500">상단(매도)</span>
+                  <div class="flex justify-between mb-1" style="font-size:0.72rem">
+                    <span style="color:#3B7FED">하단(매수)</span>
+                    <span style="color:#6F7485">중심</span>
+                    <span style="color:#E5323B">상단(매도)</span>
                   </div>
-                  <div class="relative h-3 bg-gradient-to-r from-emerald-100 via-gray-100 to-red-100 rounded-full">
-                    <div
-                      class="absolute top-0 bottom-0 w-2 h-2 m-auto rounded-full bg-gray-800 shadow border-2 border-white"
+                  <div class="relative h-3 rounded-full" style="background:linear-gradient(to right,#EBF1FF,#EEF1F5,#FFF5F5)">
+                    <div class="absolute top-0 bottom-0 w-2 h-2 m-auto rounded-full border-2 border-white" style="background:#0F122B;box-shadow:0 1px 4px rgba(15,18,43,0.2)"
                       :style="{ left: `calc(${Math.min(Math.max(indicators.bollinger.position, 2), 98)}% - 4px)` }"
                     ></div>
                   </div>
-                  <p class="text-xs text-center text-gray-500 mt-1">밴드 내 위치 {{ indicators.bollinger.position }}%</p>
+                  <p class="text-center mt-1" style="font-size:0.72rem;color:#6F7485">밴드 내 위치 {{ indicators.bollinger.position }}%</p>
                 </div>
-
-                <div class="p-3 rounded-xl bg-gray-50 text-xs text-gray-600">
-                  <span v-if="indicators.bollinger.signal === 'buy'" class="text-emerald-700 font-semibold">하단 밴드 도달 — 과매도, 반등 가능성</span>
-                  <span v-else-if="indicators.bollinger.signal === 'sell'" class="text-red-600 font-semibold">상단 밴드 도달 — 과매수, 조정 가능성</span>
+                <div class="p-3 rounded-xl text-xs" style="background:#F8F9FF;color:#6F7485">
+                  <span v-if="indicators.bollinger.signal === 'buy'" class="font-semibold" style="color:#0D9B7A">하단 밴드 도달 — 과매도, 반등 가능성</span>
+                  <span v-else-if="indicators.bollinger.signal === 'sell'" class="font-semibold" style="color:#E5323B">상단 밴드 도달 — 과매수, 조정 가능성</span>
                   <span v-else>현재가 밴드 내 위치: {{ indicators.bollinger.position }}% (0%=하단, 100%=상단)</span>
                 </div>
               </div>
 
-            </div><!-- /grid -->
+            </div>
 
-            <!-- ── AI 지표 분석 ── -->
-            <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <!-- AI 지표 분석 -->
+            <div class="rounded-2xl p-5" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
               <div class="flex items-center gap-2 mb-4">
-                <BrainCircuit class="w-4 h-4 text-violet-500" />
-                <h3 class="font-bold text-gray-900 text-sm">AI 지표 분석</h3>
-                <span class="text-xs text-gray-400 ml-1">{{ selected.name }}</span>
-                <button
-                  @click="generateAiAnalysis"
-                  :disabled="aiLoading"
-                  class="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-colors"
+                <BrainCircuit class="w-4 h-4" style="color:#57E0C3" />
+                <h3 class="font-bold text-sm" style="color:#0F122B">지표 수치 해설</h3>
+                <span class="ml-1" style="font-size:0.72rem;color:#6F7485">{{ selected.name }}</span>
+                <button @click="generateAiAnalysis" :disabled="aiLoading"
+                  class="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+                  style="background:#0F122B;color:white"
                 >
                   <Loader2 v-if="aiLoading" class="w-3.5 h-3.5 animate-spin" />
                   <BrainCircuit v-else class="w-3.5 h-3.5" />
-                  {{ aiLoading ? '분석 중...' : (aiText ? '재분석' : 'AI 분석 시작') }}
+                  {{ aiLoading ? '해설 중...' : (aiText ? '재해설' : '지표 해설 시작') }}
                 </button>
               </div>
-
-              <!-- 초기 상태 -->
-              <div v-if="!aiText && !aiLoading && !aiError" class="py-8 text-center text-sm text-gray-400">
+              <div v-if="!aiText && !aiLoading && !aiError" class="py-8 text-center text-sm" style="color:#6F7485">
                 <BrainCircuit class="w-8 h-8 mx-auto mb-2 opacity-20" />
-                버튼을 누르면 4가지 지표를 종합한 AI 분석을 생성합니다.
+                <p>버튼을 누르면 현재 수치를 바탕으로 각 지표의 의미를 해설합니다.</p>
+                <p class="mt-1" style="font-size:0.72rem;color:#6F7485">매수·매도 판단은 <RouterLink to="/dataset" style="color:#57E0C3" class="hover:underline">ML 예측 페이지</RouterLink>의 AI 보고서를 참고하세요.</p>
               </div>
-
-              <!-- 에러 -->
-              <p v-if="aiError" class="text-xs text-red-500 py-3 text-center">{{ aiError }}</p>
-
-              <!-- 로딩 스켈레톤 -->
+              <p v-if="aiError" class="text-xs py-3 text-center" style="color:#E5323B">{{ aiError }}</p>
               <div v-if="aiLoading" class="space-y-3 animate-pulse">
-                <div v-for="i in 4" :key="i" class="h-4 bg-gray-100 rounded" :style="{ width: (85 - i * 8) + '%' }" />
+                <div v-for="i in 4" :key="i" class="h-4 rounded" style="background:#EEF1F5" :style="{ width: (85 - i * 8) + '%' }" />
               </div>
-
-              <!-- 결과 -->
               <div v-if="aiText && !aiLoading" class="space-y-4">
                 <div
                   v-for="(section, i) in aiText.split(/\n## /).filter(Boolean).map(s => {
@@ -586,146 +496,95 @@ onMounted(loadWatchlist)
                     return { title: s.slice(0, nl).replace(/^## /, '').trim(), body: s.slice(nl + 1).trim() }
                   })"
                   :key="i"
-                  class="p-4 rounded-xl border"
-                  :class="[
-                    i === 0 ? 'bg-violet-50 border-violet-100' :
-                    i === 1 ? 'bg-emerald-50 border-emerald-100' :
-                    i === 2 ? 'bg-amber-50 border-amber-100' :
-                              'bg-gray-50 border-gray-100'
-                  ]"
+                  class="p-4 rounded-xl"
+                  :style="[
+                    'background:#DFFAF4;border:1px solid #57E0C3',
+                    'background:#F8F9FF;border:1px solid #EEF1F5',
+                    'background:#FFF8E6;border:1px solid #FFD76A',
+                    'background:#F8F9FF;border:1px solid #EEF1F5',
+                  ][i] || 'background:#F8F9FF;border:1px solid #EEF1F5'"
                 >
                   <p class="text-xs font-bold mb-1.5"
-                    :class="[
-                      i === 0 ? 'text-violet-700' :
-                      i === 1 ? 'text-emerald-700' :
-                      i === 2 ? 'text-amber-700' :
-                                'text-gray-600'
-                    ]"
+                    :style="['color:#0D9B7A','color:#0F122B','color:#B8860B','color:#6F7485'][i] || 'color:#6F7485'"
                   >{{ section.title }}</p>
-                  <p class="text-xs leading-relaxed text-gray-700 whitespace-pre-line">{{ section.body }}</p>
+                  <p class="text-xs leading-relaxed whitespace-pre-line" style="color:#0F122B">{{ section.body }}</p>
                 </div>
               </div>
             </div>
 
-            <!-- ── 관련 뉴스 ── -->
-            <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <!-- 관련 뉴스 -->
+            <div class="rounded-2xl p-5" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
               <div class="flex items-center gap-2 mb-4">
-                <Newspaper class="w-4 h-4 text-blue-500" />
-                <h3 class="font-bold text-gray-900 text-sm">관련 뉴스</h3>
-                <span class="text-xs text-gray-400 ml-1">{{ selected.name }}</span>
+                <Newspaper class="w-4 h-4" style="color:#57E0C3" />
+                <h3 class="font-bold text-sm" style="color:#0F122B">관련 뉴스</h3>
+                <span class="ml-1" style="font-size:0.72rem;color:#6F7485">{{ selected.name }}</span>
                 <span v-if="newsLoading" class="ml-auto">
-                  <RefreshCw class="w-4 h-4 text-blue-400 animate-spin" />
+                  <RefreshCw class="w-4 h-4 animate-spin" style="color:#57E0C3" />
                 </span>
               </div>
-
-              <!-- 에러 -->
-              <p v-if="newsError" class="text-xs text-red-500 py-3 text-center">{{ newsError }}</p>
-
-              <!-- 결과 없음 -->
-              <p v-else-if="!newsLoading && stockNews.length === 0" class="text-xs text-gray-400 py-3 text-center">뉴스 결과가 없습니다</p>
-
-              <!-- 뉴스 목록 -->
-              
-              <ul v-else class="divide-y divide-gray-50">
-              
-                <li v-for="(item, i) in stockNews" :key="i" class="py-3 first:pt-0 last:pb-0">
-                  <a :href="item.url" target="_blank" rel="noopener noreferrer"
-                    class="group flex items-start gap-3 hover:opacity-80 transition-opacity"
-                  >
+              <p v-if="newsError" class="text-xs py-3 text-center" style="color:#E5323B">{{ newsError }}</p>
+              <p v-else-if="!newsLoading && stockNews.length === 0" class="text-xs py-3 text-center" style="color:#6F7485">뉴스 결과가 없습니다</p>
+              <ul v-else class="space-y-0" style="border-top:1px solid #EEF1F5">
+                <li v-for="(item, i) in stockNews" :key="i" style="border-bottom:1px solid #EEF1F5" class="py-3">
+                  <a :href="item.url" target="_blank" rel="noopener noreferrer" class="group flex items-start gap-3 hover:opacity-80 transition-opacity">
                     <div class="flex-1 min-w-0">
-                      <p class="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
-                        {{ item.title }}
-                      </p>
-                      <p v-if="item.description" class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ item.description }}</p>
-                      <p class="text-xs text-gray-300 mt-1">{{ item.pub_date }}</p>
+                      <p class="text-sm font-semibold line-clamp-2 transition-colors group-hover:underline" style="color:#0F122B">{{ item.title }}</p>
+                      <p v-if="item.description" class="mt-0.5 line-clamp-1" style="font-size:0.72rem;color:#6F7485">{{ item.description }}</p>
+                      <p class="mt-1" style="font-size:0.72rem;color:#6F7485">{{ item.pub_date }}</p>
                     </div>
-                    <ExternalLink class="w-3.5 h-3.5 text-gray-300 group-hover:text-blue-400 flex-shrink-0 mt-0.5 transition-colors" />
+                    <ExternalLink class="w-3.5 h-3.5 flex-shrink-0 mt-0.5 transition-colors group-hover:text-[#57E0C3]" style="color:#6F7485" />
                   </a>
                 </li>
               </ul>
             </div>
 
-            <!-- ── 관련 영상 ── -->
-            <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <!-- 관련 영상 -->
+            <div class="rounded-2xl p-5" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
               <div class="flex items-center gap-2 mb-4">
-                <Play class="w-4 h-4 text-red-500" />
-                <h3 class="font-bold text-gray-900 text-sm">관련 영상</h3>
-                <span class="text-xs text-gray-400 ml-1">{{ selected.name }}</span>
-                <span v-if="stock_youtube_data.length > 0" class="ml-auto text-xs text-gray-400">
-                  {{ youtubeIndex + 1 }} / {{ stock_youtube_data.length }}
-                </span>
+                <Play class="w-4 h-4" style="color:#E5323B" />
+                <h3 class="font-bold text-sm" style="color:#0F122B">관련 영상</h3>
+                <span class="ml-1" style="font-size:0.72rem;color:#6F7485">{{ selected.name }}</span>
+                <span v-if="stock_youtube_data.length > 0" class="ml-auto" style="font-size:0.72rem;color:#6F7485">{{ youtubeIndex + 1 }} / {{ stock_youtube_data.length }}</span>
               </div>
-
-              <!-- 로딩 -->
               <div v-if="stock_youtube_data.length === 0 && loading" class="py-10 text-center">
-                <RefreshCw class="w-6 h-6 text-gray-300 animate-spin mx-auto" />
+                <RefreshCw class="w-6 h-6 animate-spin mx-auto" style="color:#EEF1F5" />
               </div>
-
-              <!-- 결과 없음 -->
-              <p v-else-if="stock_youtube_data.length === 0" class="text-xs text-gray-400 py-6 text-center">영상 결과가 없습니다</p>
-
-              <!-- 플레이어 -->
+              <p v-else-if="stock_youtube_data.length === 0" class="text-xs py-6 text-center" style="color:#6F7485">영상 결과가 없습니다</p>
               <div v-else>
-                <!-- iframe 임베드 -->
                 <div class="aspect-video rounded-xl overflow-hidden mb-3 bg-black">
                   <iframe
                     :src="`https://www.youtube.com/embed/${stock_youtube_data[youtubeIndex].video_id}`"
-                    class="w-full h-full"
-                    frameborder="0"
+                    class="w-full h-full" frameborder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowfullscreen
                   />
                 </div>
-
-                <!-- 제목 -->
-                <p class="text-sm font-semibold text-gray-900 mb-4 line-clamp-2">
-                  {{ stock_youtube_data[youtubeIndex].title }}
-                </p>
-
-                <!-- 이전 / 다음 -->
+                <p class="text-sm font-semibold mb-4 line-clamp-2" style="color:#0F122B">{{ stock_youtube_data[youtubeIndex].title }}</p>
                 <div class="flex items-center justify-between gap-2">
-                  <button
-                    @click="youtubeIndex--"
-                    :disabled="youtubeIndex === 0"
-                    class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-semibold transition-all border"
-                    :class="youtubeIndex === 0
-                      ? 'border-gray-100 text-gray-300 cursor-not-allowed'
-                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'"
-                  >
-                    <ChevronLeft class="w-4 h-4" /> 이전
-                  </button>
-
-                  <!-- 썸네일 목록 (현재 ±2) -->
+                  <button @click="youtubeIndex--" :disabled="youtubeIndex === 0"
+                    class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+                    :style="youtubeIndex === 0 ? 'border:1.5px solid #EEF1F5;color:#6F7485;cursor:not-allowed;opacity:0.5' : 'border:1.5px solid #EEF1F5;color:#0F122B'"
+                  ><ChevronLeft class="w-4 h-4" /> 이전</button>
                   <div class="flex gap-1.5 overflow-hidden">
                     <button
-                      v-for="(v, i) in stock_youtube_data"
-                      :key="i"
+                      v-for="(v, i) in stock_youtube_data" :key="i"
                       v-show="nearCurrent(i)"
                       @click="youtubeIndex = i"
                       class="w-12 h-9 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-all"
-                      :class="i === youtubeIndex ? 'border-blue-500' : 'border-transparent opacity-60 hover:opacity-100'"
-                    >
-                      <img :src="v.thumbnail_url" class="w-full h-full object-cover" />
-                    </button>
+                      :style="i === youtubeIndex ? 'border-color:#57E0C3' : 'border-color:transparent;opacity:0.6'"
+                    ><img :src="v.thumbnail_url" class="w-full h-full object-cover" /></button>
                   </div>
-
-                  <button
-                    @click="youtubeIndex++"
-                    :disabled="youtubeIndex === stock_youtube_data.length - 1"
-                    class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-semibold transition-all border"
-                    :class="youtubeIndex === stock_youtube_data.length - 1
-                      ? 'border-gray-100 text-gray-300 cursor-not-allowed'
-                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'"
-                  >
-                    다음 <ChevronRight class="w-4 h-4" />
-                  </button>
+                  <button @click="youtubeIndex++" :disabled="youtubeIndex === stock_youtube_data.length - 1"
+                    class="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+                    :style="youtubeIndex === stock_youtube_data.length - 1 ? 'border:1.5px solid #EEF1F5;color:#6F7485;cursor:not-allowed;opacity:0.5' : 'border:1.5px solid #EEF1F5;color:#0F122B'"
+                  >다음 <ChevronRight class="w-4 h-4" /></button>
                 </div>
               </div>
             </div>
 
-          </div><!-- /indicators -->
+          </div>
 
-        </div><!-- /main -->
+        </div>
       </div>
     </main>
     <AppFooter />

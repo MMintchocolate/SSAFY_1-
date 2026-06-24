@@ -248,122 +248,127 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-white" style="font-family:'Pretendard','Noto Sans KR',sans-serif">
     <NavBar />
     <main class="pt-24 pb-16 max-w-3xl mx-auto px-4 sm:px-6">
 
       <!-- 헤더 -->
       <div class="mb-6">
-        <div class="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-full mb-3 border border-emerald-100">
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold mb-3" style="background:#DFFAF4;color:#0D9B7A;font-size:0.72rem">
           <MapPin class="w-3 h-3" />지점 찾기
         </div>
-        <h1 class="text-3xl font-extrabold text-gray-900 mb-1">은행 지점 검색</h1>
-        <p class="text-gray-400 text-sm">지역명으로 검색하거나 내 위치 주변 지점을 찾아보세요</p>
+        <h1 class="font-black mb-1" style="font-size:1.8rem;color:#0F122B">은행 지점 검색</h1>
+        <p style="color:#6F7485;font-size:0.9rem">지역명으로 검색하거나 내 위치 주변 지점을 찾아보세요</p>
       </div>
 
       <!-- 모드 탭 -->
-      <div class="flex gap-1 p-1 bg-white border border-gray-200 rounded-xl shadow-sm mb-4 w-fit">
+      <div class="flex gap-1 p-1 rounded-xl w-fit mb-4" style="background:white;border:1px solid #EEF1F5">
         <button
           @click="mode = 'region'"
           class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-          :class="mode === 'region' ? 'bg-blue-700 text-white shadow' : 'text-gray-500 hover:bg-gray-100'"
+          :style="mode === 'region' ? 'background:#0F122B;color:white' : 'color:#6F7485'"
         >
           <Building2 class="w-4 h-4" />지역 검색
         </button>
         <button
           @click="mode = 'location'"
           class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-          :class="mode === 'location' ? 'bg-emerald-600 text-white shadow' : 'text-gray-500 hover:bg-gray-100'"
+          :style="mode === 'location' ? 'background:#57E0C3;color:#0F122B' : 'color:#6F7485'"
         >
           <Navigation class="w-4 h-4" />내 위치
         </button>
       </div>
 
       <!-- 기능 1 -->
-      <div v-if="mode === 'region'" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4">
-        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">지역 + 은행 검색</p>
+      <div v-if="mode === 'region'" class="rounded-2xl p-4 mb-4" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
+        <p class="font-bold mb-3" style="font-size:0.72rem;color:#6F7485;letter-spacing:0.08em">지역 + 은행 검색</p>
         <div class="flex flex-col sm:flex-row gap-2">
           <input
             v-model="regionInput"
             @keyup.enter="searchByRegion"
             type="text"
             placeholder="지역명  예) 부산진구, 강남구"
-            class="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+            class="flex-1 px-4 py-2.5 rounded-xl text-sm focus:outline-none transition-all"
+            style="border:1.5px solid #EEF1F5;color:#0F122B"
           />
           <input
             v-model="bankInput"
             @keyup.enter="searchByRegion"
             type="text"
             placeholder="은행명  예) 국민은행, ATM"
-            class="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+            class="flex-1 px-4 py-2.5 rounded-xl text-sm focus:outline-none transition-all"
+            style="border:1.5px solid #EEF1F5;color:#0F122B"
           />
           <button
             @click="searchByRegion"
             :disabled="searching"
-            class="flex items-center gap-1.5 px-5 py-2.5 bg-blue-700 text-white rounded-xl text-sm font-bold hover:bg-blue-800 transition-colors disabled:opacity-50"
+            class="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
+            style="background:#0F122B;color:white"
           >
             <Loader2 v-if="searching" class="w-4 h-4 animate-spin" />
             <Search v-else class="w-4 h-4" />검색
           </button>
         </div>
-        <p class="text-xs text-gray-400 mt-2">지역명만 입력해도 검색됩니다.</p>
+        <p class="mt-2" style="font-size:0.75rem;color:#6F7485">지역명만 입력해도 검색됩니다.</p>
       </div>
 
       <!-- 기능 2 -->
-      <div v-else class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4">
-        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">현재 위치 기반 검색 (반경 3km)</p>
+      <div v-else class="rounded-2xl p-4 mb-4" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
+        <p class="font-bold mb-3" style="font-size:0.72rem;color:#6F7485;letter-spacing:0.08em">현재 위치 기반 검색 (반경 3km)</p>
         <div class="flex flex-col sm:flex-row gap-2">
           <input
             v-model="nearbyKw"
             @keyup.enter="searchNearbyAgain"
             type="text"
             placeholder="은행명  예) 국민은행, ATM"
-            class="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
+            class="flex-1 px-4 py-2.5 rounded-xl text-sm focus:outline-none transition-all"
+            style="border:1.5px solid #EEF1F5;color:#0F122B"
           />
           <button
             @click="userPos ? searchNearbyAgain() : locateAndSearch()"
             :disabled="locating || searching"
-            class="flex items-center gap-1.5 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-colors disabled:opacity-50"
+            class="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
+            style="background:#57E0C3;color:#0F122B"
           >
             <Loader2 v-if="locating || searching" class="w-4 h-4 animate-spin" />
             <Crosshair v-else class="w-4 h-4" />
             {{ locating ? '위치 확인 중...' : (userPos ? '재검색' : '내 위치로 검색') }}
           </button>
         </div>
-        <div v-if="currentArea" class="mt-2 flex items-center gap-1.5 text-xs text-emerald-700 font-semibold">
+        <div v-if="currentArea" class="mt-2 flex items-center gap-1.5 font-semibold" style="font-size:0.75rem;color:#0D9B7A">
           <MapPin class="w-3 h-3" />{{ currentArea }} 주변 검색 중
         </div>
-        <p v-else class="text-xs text-gray-400 mt-2">버튼을 누르면 브라우저 위치 권한을 요청합니다.</p>
+        <p v-else class="mt-2" style="font-size:0.75rem;color:#6F7485">버튼을 누르면 브라우저 위치 권한을 요청합니다.</p>
       </div>
 
       <!-- 오류 -->
-      <div v-if="errorMsg" class="mb-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600 font-medium">
+      <div v-if="errorMsg" class="mb-4 rounded-xl px-4 py-3 text-sm font-medium" style="background:#FFF5F5;border:1px solid #FFD0D0;color:#E5323B">
         {{ errorMsg }}
       </div>
 
       <!-- 지도 -->
-      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-4">
+      <div class="rounded-2xl overflow-hidden mb-4" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
         <div ref="mapEl" style="height: 360px; width: 100%;" />
       </div>
 
       <!-- 결과 목록 -->
-      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">
+      <div class="rounded-2xl p-5" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
+        <p class="font-bold mb-4" style="font-size:0.72rem;color:#6F7485;letter-spacing:0.08em">
           검색 결과
-          <span v-if="branches.length" class="ml-1 text-blue-600">{{ branches.length }}개</span>
+          <span v-if="branches.length" class="ml-1 font-black" style="color:#57E0C3">{{ branches.length }}개</span>
         </p>
 
         <div v-if="searching" class="space-y-3">
-          <div v-for="i in 5" :key="i" class="flex items-center gap-3 p-3 rounded-xl border border-gray-100 animate-pulse">
-            <div class="w-10 h-10 bg-gray-200 rounded-xl flex-shrink-0" />
+          <div v-for="i in 5" :key="i" class="flex items-center gap-3 p-3 rounded-xl animate-pulse" style="border:1px solid #EEF1F5">
+            <div class="w-10 h-10 rounded-xl flex-shrink-0" style="background:#EEF1F5" />
             <div class="flex-1 space-y-2">
-              <div class="w-40 h-4 bg-gray-200 rounded" />
-              <div class="w-56 h-3 bg-gray-200 rounded" />
+              <div class="w-40 h-4 rounded" style="background:#EEF1F5" />
+              <div class="w-56 h-3 rounded" style="background:#EEF1F5" />
             </div>
           </div>
         </div>
 
-        <div v-else-if="!branches.length" class="text-center py-10 text-sm text-gray-400">
+        <div v-else-if="!branches.length" class="text-center py-10 text-sm" style="color:#6F7485">
           <MapPin class="w-8 h-8 mx-auto mb-2 opacity-20" />
           검색어를 입력하고 검색 버튼을 눌러주세요.
         </div>
@@ -373,20 +378,23 @@ onUnmounted(() => {
             v-for="(branch, i) in branches"
             :key="i"
             @click="focusBranch(branch)"
-            class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer border border-gray-100"
+            class="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors hover:bg-[#F8F9FF]"
+            style="border:1px solid #EEF1F5"
           >
             <div
-              class="w-10 h-10 rounded-xl flex items-center justify-center text-white text-xs font-black flex-shrink-0"
-              :class="mode === 'region' ? 'bg-blue-700' : 'bg-emerald-600'"
+              class="w-10 h-10 rounded-xl flex items-center justify-center font-black flex-shrink-0"
+              :style="mode === 'region'
+                ? 'background:#0F122B;color:white;font-size:0.75rem'
+                : 'background:#57E0C3;color:#0F122B;font-size:0.75rem'"
             >{{ i + 1 }}</div>
             <div class="flex-1 min-w-0">
-              <p class="font-bold text-gray-900 text-sm truncate">{{ branch.title }}</p>
-              <p class="text-xs text-gray-400 truncate">{{ branch.address }}</p>
+              <p class="font-bold text-sm truncate" style="color:#0F122B">{{ branch.title }}</p>
+              <p class="text-xs truncate" style="color:#6F7485">{{ branch.address }}</p>
               <div class="flex items-center gap-2 mt-0.5">
-                <span v-if="branch.phone" class="text-xs text-gray-300 flex items-center gap-0.5">
+                <span v-if="branch.phone" class="flex items-center gap-0.5" style="font-size:0.72rem;color:#6F7485">
                   <Phone class="w-3 h-3" />{{ branch.phone }}
                 </span>
-                <span v-if="branch.distance" class="text-xs text-emerald-500 font-semibold">
+                <span v-if="branch.distance" class="font-semibold" style="font-size:0.72rem;color:#0D9B7A">
                   {{ Number(branch.distance).toLocaleString() }}m
                 </span>
               </div>
@@ -396,7 +404,8 @@ onUnmounted(() => {
               target="_blank"
               rel="noopener noreferrer"
               @click.stop
-              class="flex items-center gap-1 px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 rounded-lg text-xs font-bold flex-shrink-0 transition-colors"
+              class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold flex-shrink-0 transition-colors"
+              style="background:#FFD76A;color:#0F122B"
             ><Route class="w-3 h-3" />길찾기</a>
           </div>
         </div>

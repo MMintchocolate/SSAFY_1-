@@ -253,94 +253,95 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-white" style="font-family:'Pretendard','Noto Sans KR',sans-serif">
     <NavBar />
 
     <main class="pt-16">
-      <!-- Page header -->
-      <div class="bg-white border-b border-gray-100">
+      <!-- 페이지 헤더 -->
+      <div style="background:linear-gradient(90deg,#fffdf9 0%,#ffffff 50%,#f2fffb 100%);border-bottom:1px solid #EEF1F5">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 py-10">
-          <div class="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-full mb-3 uppercase tracking-widest border border-emerald-100">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold mb-3" style="background:#DFFAF4;color:#0D9B7A;font-size:0.72rem">
             <BarChart2 class="w-3 h-3" />Yahoo Finance 실시간 데이터
           </div>
-          <h1 class="text-3xl font-extrabold text-gray-900 mb-1">주식 검색</h1>
-          <p class="text-gray-400">종목명 또는 티커로 검색하세요 (예: Apple, AAPL, 삼성전자, 005930.KS)</p>
+          <h1 class="font-black mb-1" style="font-size:1.8rem;color:#0F122B">주식 검색</h1>
+          <p style="color:#6F7485;font-size:0.9rem">종목명 또는 티커로 검색하세요 (예: Apple, AAPL, 삼성전자, 005930.KS)</p>
         </div>
       </div>
 
       <div class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
 
-        <!-- Search bar -->
+        <!-- 검색 바 -->
         <div class="relative mb-8 max-w-2xl">
-          <div class="flex items-center gap-2 bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
-            <Search class="w-5 h-5 text-gray-400 flex-shrink-0" />
+          <div class="flex items-center gap-2 px-4 py-3 rounded-2xl transition-all" style="background:white;border:1.5px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
+            <Search class="w-5 h-5 flex-shrink-0" style="color:#6F7485" />
             <input
               v-model="query"
               @input="onInput"
               @keydown.enter="doSearch"
               placeholder="종목명 또는 티커 입력 (예: AAPL, Tesla)"
-              class="flex-1 outline-none text-sm text-gray-800 placeholder-gray-400 bg-transparent"
+              class="flex-1 outline-none text-sm bg-transparent"
+              style="color:#0F122B"
             />
-            <button v-if="query" @click="clearSearch" class="text-gray-400 hover:text-gray-600">
+            <button v-if="query" @click="clearSearch" style="color:#6F7485">
               <X class="w-4 h-4" />
             </button>
           </div>
 
-          <!-- Search dropdown -->
           <div
             v-if="searchResults.length > 0 || searchLoading"
-            class="absolute top-full mt-1 left-0 right-0 bg-white rounded-2xl border border-gray-200 shadow-xl z-20 overflow-hidden"
+            class="absolute top-full mt-1 left-0 right-0 rounded-2xl z-20 overflow-hidden"
+            style="background:white;border:1px solid #EEF1F5;box-shadow:0 8px 24px rgba(15,18,43,0.1)"
           >
-            <div v-if="searchLoading" class="px-4 py-3 text-sm text-gray-400">검색 중...</div>
+            <div v-if="searchLoading" class="px-4 py-3 text-sm" style="color:#6F7485">검색 중...</div>
             <button
               v-for="r in searchResults"
               :key="r.symbol"
               @click="selectStock(r.symbol, r.name)"
-              class="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors text-left border-b border-gray-50 last:border-0"
+              class="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[#F8F9FF]"
+              style="border-bottom:1px solid #EEF1F5"
             >
-              <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-900 flex items-center justify-center text-white text-xs font-black flex-shrink-0">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center font-black flex-shrink-0" style="background:#0F122B;color:white;font-size:0.72rem">
                 {{ r.symbol.slice(0, 4) }}
               </div>
               <div class="flex-1 min-w-0">
-                <p class="font-semibold text-gray-900 text-sm">{{ r.symbol }}</p>
-                <p class="text-xs text-gray-500 truncate">{{ r.name }}</p>
+                <p class="font-semibold text-sm" style="color:#0F122B">{{ r.symbol }}</p>
+                <p class="text-xs truncate" style="color:#6F7485">{{ r.name }}</p>
               </div>
-              <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">{{ r.exchange }}</span>
+              <span class="text-xs px-2 py-0.5 rounded-full flex-shrink-0" style="background:#F8F9FF;color:#6F7485">{{ r.exchange }}</span>
             </button>
           </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          <!-- ── Main: detail + chart ── -->
+          <!-- 메인: 상세 + 차트 -->
           <div class="lg:col-span-2 space-y-4">
 
-            <!-- Loading skeleton -->
-            <div v-if="detailLoading" class="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm animate-pulse space-y-4">
+            <!-- 로딩 스켈레톤 -->
+            <div v-if="detailLoading" class="rounded-2xl p-6 animate-pulse space-y-4" style="background:white;border:1px solid #EEF1F5">
               <div class="flex gap-3">
-                <div class="w-14 h-14 rounded-xl bg-gray-200"></div>
+                <div class="w-14 h-14 rounded-xl" style="background:#EEF1F5"></div>
                 <div class="flex-1 space-y-2 pt-1">
-                  <div class="w-28 h-3 bg-gray-200 rounded"></div>
-                  <div class="w-52 h-5 bg-gray-200 rounded"></div>
+                  <div class="w-28 h-3 rounded" style="background:#EEF1F5"></div>
+                  <div class="w-52 h-5 rounded" style="background:#EEF1F5"></div>
                 </div>
               </div>
-              <div class="w-44 h-10 bg-gray-200 rounded"></div>
-              <div class="h-64 bg-gray-100 rounded-xl"></div>
+              <div class="w-44 h-10 rounded" style="background:#EEF1F5"></div>
+              <div class="h-64 rounded-xl" style="background:#F8F9FF"></div>
             </div>
 
-            <!-- Stock detail card -->
-            <div v-else-if="stockDetail && !stockDetail.error" class="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+            <!-- 주식 상세 카드 -->
+            <div v-else-if="stockDetail && !stockDetail.error" class="rounded-2xl p-6" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
 
-              <!-- Header -->
               <div class="flex items-start justify-between mb-5">
                 <div class="flex items-center gap-3">
-                  <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center text-white text-sm font-black shadow-sm flex-shrink-0">
+                  <div class="w-14 h-14 rounded-xl flex items-center justify-center font-black flex-shrink-0" style="background:#0F122B;color:white;font-size:0.85rem">
                     {{ selectedSymbol.slice(0, 4) }}
                   </div>
                   <div>
-                    <p class="text-xs text-gray-400 font-medium">{{ selectedSymbol }} · {{ stockDetail.exchange }}</p>
-                    <p class="font-extrabold text-gray-900 text-xl leading-tight">{{ stockDetail.name }}</p>
-                    <p v-if="stockDetail.sector" class="text-xs text-gray-500 mt-0.5">
+                    <p class="font-medium" style="font-size:0.72rem;color:#6F7485">{{ selectedSymbol }} · {{ stockDetail.exchange }}</p>
+                    <p class="font-extrabold leading-tight" style="font-size:1.2rem;color:#0F122B">{{ stockDetail.name }}</p>
+                    <p v-if="stockDetail.sector" class="mt-0.5" style="font-size:0.72rem;color:#6F7485">
                       {{ stockDetail.sector }}<span v-if="stockDetail.industry"> · {{ stockDetail.industry }}</span>
                     </p>
                   </div>
@@ -349,34 +350,30 @@ onUnmounted(() => {
                 <button
                   v-if="isLoggedIn"
                   @click="toggleWatchlist(selectedSymbol, stockDetail.name)"
-                  class="flex items-center gap-1.5 px-3 py-2 rounded-xl border transition-all text-sm font-semibold flex-shrink-0"
-                  :class="watchlistSet.has(selectedSymbol)
-                    ? 'bg-amber-50 border-amber-200 text-amber-600 hover:bg-amber-100'
-                    : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-amber-300 hover:text-amber-500'"
+                  class="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all text-sm font-semibold flex-shrink-0"
+                  :style="watchlistSet.has(selectedSymbol)
+                    ? 'background:#FFF8E6;border:1.5px solid #FFD76A;color:#B8860B'
+                    : 'background:white;border:1.5px solid #EEF1F5;color:#6F7485'"
                 >
-                  <Star
-                    class="w-4 h-4 transition-all"
-                    :class="watchlistSet.has(selectedSymbol) ? 'fill-amber-400 text-amber-400' : ''"
-                  />
+                  <Star class="w-4 h-4 transition-all" :class="watchlistSet.has(selectedSymbol) ? 'fill-amber-400 text-amber-400' : ''" />
                   {{ watchlistSet.has(selectedSymbol) ? '관심 해제' : '관심 종목' }}
                 </button>
               </div>
 
-              <!-- Price & change -->
               <div class="flex items-end gap-4 mb-5">
                 <div>
-                  <p class="text-xs text-gray-400 mb-0.5">현재가</p>
+                  <p class="mb-0.5" style="font-size:0.72rem;color:#6F7485">현재가</p>
                   <div class="flex items-end gap-1.5">
-                    <span class="text-4xl font-black text-gray-900 leading-none tabular-nums">
+                    <span class="font-black leading-none tabular-nums" style="font-size:2.4rem;color:#0F122B">
                       {{ fmtPrice(stockDetail.price) }}
                     </span>
-                    <span class="text-lg text-gray-400 mb-0.5">{{ stockDetail.currency }}</span>
+                    <span class="mb-0.5" style="font-size:1rem;color:#6F7485">{{ stockDetail.currency }}</span>
                   </div>
                 </div>
                 <div
                   v-if="stockDetail.change != null"
                   class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-bold mb-1"
-                  :class="stockDetail.change >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'"
+                  :style="stockDetail.change >= 0 ? 'background:#FFF5F5;color:#E5323B' : 'background:#EBF1FF;color:#3B7FED'"
                 >
                   <TrendingUp v-if="stockDetail.change >= 0" class="w-4 h-4" />
                   <TrendingDown v-else class="w-4 h-4" />
@@ -385,317 +382,228 @@ onUnmounted(() => {
                 </div>
               </div>
 
-              <!-- Stats grid -->
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 p-4 bg-gray-50 rounded-xl">
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 p-4 rounded-xl" style="background:#F8F9FF">
                 <div>
-                  <p class="text-xs text-gray-400 mb-0.5">시가총액</p>
-                  <p class="font-bold text-gray-800 text-sm tabular-nums">{{ fmtCap(stockDetail.market_cap) }}</p>
+                  <p class="mb-0.5" style="font-size:0.72rem;color:#6F7485">시가총액</p>
+                  <p class="font-bold text-sm tabular-nums" style="color:#0F122B">{{ fmtCap(stockDetail.market_cap) }}</p>
                 </div>
                 <div>
-                  <p class="text-xs text-gray-400 mb-0.5">전일 종가</p>
-                  <p class="font-bold text-gray-800 text-sm tabular-nums">
-                    {{ fmtPrice(stockDetail.prev_close) }}
-                  </p>
+                  <p class="mb-0.5" style="font-size:0.72rem;color:#6F7485">전일 종가</p>
+                  <p class="font-bold text-sm tabular-nums" style="color:#0F122B">{{ fmtPrice(stockDetail.prev_close) }}</p>
                 </div>
                 <div>
-                  <p class="text-xs text-gray-400 mb-0.5">52주 고가</p>
-                  <p class="font-bold text-emerald-700 text-sm tabular-nums">
-                    {{ fmtPrice(stockDetail.w52_high) }}
-                  </p>
+                  <p class="mb-0.5" style="font-size:0.72rem;color:#6F7485">52주 고가</p>
+                  <p class="font-bold text-sm tabular-nums" style="color:#E5323B">{{ fmtPrice(stockDetail.w52_high) }}</p>
                 </div>
                 <div>
-                  <p class="text-xs text-gray-400 mb-0.5">52주 저가</p>
-                  <p class="font-bold text-red-600 text-sm tabular-nums">
-                    {{ fmtPrice(stockDetail.w52_low) }}
-                  </p>
+                  <p class="mb-0.5" style="font-size:0.72rem;color:#6F7485">52주 저가</p>
+                  <p class="font-bold text-sm tabular-nums" style="color:#3B7FED">{{ fmtPrice(stockDetail.w52_low) }}</p>
                 </div>
               </div>
 
-              <!-- 빠른 이동 버튼 -->
               <div class="flex gap-2 mb-5">
-                <RouterLink
-                  to="/indicators"
-                  class="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-colors shadow-sm"
-                >
-                  <TrendingUp class="w-3.5 h-3.5" />
-                  매수신호 보러가기
+                <RouterLink to="/indicators" class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all" style="background:#57E0C3;color:#0F122B">
+                  <TrendingUp class="w-3.5 h-3.5" />매수신호 보러가기
                 </RouterLink>
-                <RouterLink
-                  to="/dataset"
-                  class="flex items-center gap-1.5 px-4 py-2 bg-violet-600 text-white text-xs font-bold rounded-xl hover:bg-violet-700 transition-colors shadow-sm"
-                >
-                  <BarChart2 class="w-3.5 h-3.5" />
-                  ML 데이터 보러가기
+                <RouterLink to="/dataset" class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all" style="background:#F8F9FF;color:#0F122B;border:1.5px solid #EEF1F5">
+                  <BarChart2 class="w-3.5 h-3.5" />ML 데이터 보러가기
                 </RouterLink>
               </div>
 
-              <!-- Period selector + view toggle -->
               <div class="flex items-center gap-2 mb-4 flex-wrap">
-                <span class="text-xs text-gray-500 font-medium">기간</span>
+                <span class="font-medium" style="font-size:0.75rem;color:#6F7485">기간</span>
                 <div class="flex gap-1.5">
                   <button
-                    v-for="p in PERIODS"
-                    :key="p.value"
+                    v-for="p in PERIODS" :key="p.value"
                     @click="period = p.value"
-                    class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-                    :class="period === p.value
-                      ? 'bg-blue-700 text-white'
-                      : 'bg-gray-100 text-gray-500 hover:bg-blue-50 hover:text-blue-700'"
-                  >
-                    {{ p.label }}
-                  </button>
+                    class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
+                    :style="period === p.value ? 'background:#0F122B;color:white' : 'background:#F8F9FF;color:#6F7485'"
+                  >{{ p.label }}</button>
                 </div>
-                <div class="ml-auto flex gap-1 bg-gray-100 p-0.5 rounded-lg">
-                  <button
-                    @click="viewMode = 'chart'"
-                    class="px-3 py-1 rounded-md text-xs font-bold transition-all"
-                    :class="viewMode === 'chart' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-400 hover:text-gray-600'"
+                <div class="ml-auto flex gap-1 p-0.5 rounded-lg" style="background:#F8F9FF">
+                  <button @click="viewMode = 'chart'" class="px-3 py-1 rounded-md text-xs font-bold transition-all"
+                    :style="viewMode === 'chart' ? 'background:white;color:#0F122B;box-shadow:0 1px 4px rgba(15,18,43,0.08)' : 'color:#6F7485'"
                   >차트</button>
-                  <button
-                    @click="viewMode = 'table'"
-                    class="px-3 py-1 rounded-md text-xs font-bold transition-all"
-                    :class="viewMode === 'table' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-400 hover:text-gray-600'"
+                  <button @click="viewMode = 'table'" class="px-3 py-1 rounded-md text-xs font-bold transition-all"
+                    :style="viewMode === 'table' ? 'background:white;color:#0F122B;box-shadow:0 1px 4px rgba(15,18,43,0.08)' : 'color:#6F7485'"
                   >표</button>
                 </div>
               </div>
 
-              <!-- Chart -->
               <div v-if="viewMode === 'chart'" class="relative h-64">
-                <div v-if="historyLoading" class="absolute inset-0 flex items-center justify-center bg-gray-50 rounded-xl">
-                  <span class="text-sm text-gray-400">차트 로딩 중...</span>
+                <div v-if="historyLoading" class="absolute inset-0 flex items-center justify-center rounded-xl" style="background:#F8F9FF">
+                  <span class="text-sm" style="color:#6F7485">차트 로딩 중...</span>
                 </div>
-                <Line
-                  v-else-if="history.length > 0"
-                  :data="chartData"
-                  :options="chartOptions"
-                  style="height: 100%; width: 100%"
-                />
-                <div v-else class="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
-                  차트 데이터 없음
-                </div>
+                <Line v-else-if="history.length > 0" :data="chartData" :options="chartOptions" style="height:100%;width:100%" />
+                <div v-else class="absolute inset-0 flex items-center justify-center text-sm" style="color:#6F7485">차트 데이터 없음</div>
               </div>
 
-              <!-- Table -->
-              <div v-else class="overflow-auto max-h-64 rounded-xl border border-gray-100">
-                <div v-if="historyLoading" class="py-8 text-center text-sm text-gray-400">로딩 중...</div>
+              <div v-else class="overflow-auto max-h-64 rounded-xl" style="border:1px solid #EEF1F5">
+                <div v-if="historyLoading" class="py-8 text-center text-sm" style="color:#6F7485">로딩 중...</div>
                 <table v-else-if="history.length > 0" class="w-full text-xs">
-                  <thead class="sticky top-0 bg-gray-50 border-b border-gray-200">
+                  <thead class="sticky top-0" style="background:#F8F9FF;border-bottom:1px solid #EEF1F5">
                     <tr>
-                      <th class="px-3 py-2 text-left font-bold text-gray-500">날짜</th>
-                      <th class="px-3 py-2 text-right font-bold text-gray-500">시가</th>
-                      <th class="px-3 py-2 text-right font-bold text-gray-500">고가</th>
-                      <th class="px-3 py-2 text-right font-bold text-gray-500">저가</th>
-                      <th class="px-3 py-2 text-right font-bold text-gray-500">종가</th>
-                      <th class="px-3 py-2 text-right font-bold text-gray-500">거래량</th>
+                      <th class="px-3 py-2 text-left font-bold" style="color:#6F7485">날짜</th>
+                      <th class="px-3 py-2 text-right font-bold" style="color:#6F7485">시가</th>
+                      <th class="px-3 py-2 text-right font-bold" style="color:#E5323B">고가</th>
+                      <th class="px-3 py-2 text-right font-bold" style="color:#3B7FED">저가</th>
+                      <th class="px-3 py-2 text-right font-bold" style="color:#0F122B">종가</th>
+                      <th class="px-3 py-2 text-right font-bold" style="color:#6F7485">거래량</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr
-                      v-for="row in historyReversed"
-                      :key="row.date"
-                      class="border-b border-gray-50 hover:bg-gray-50 transition-colors"
-                    >
-                      <td class="px-3 py-1.5 text-gray-500 tabular-nums">{{ row.date }}</td>
-                      <td class="px-3 py-1.5 text-right text-gray-800 tabular-nums font-mono">{{ row.open?.toLocaleString() }}</td>
-                      <td class="px-3 py-1.5 text-right text-emerald-700 tabular-nums font-mono">{{ row.high?.toLocaleString() }}</td>
-                      <td class="px-3 py-1.5 text-right text-red-600 tabular-nums font-mono">{{ row.low?.toLocaleString() }}</td>
-                      <td class="px-3 py-1.5 text-right font-bold text-gray-900 tabular-nums font-mono">{{ row.close?.toLocaleString() }}</td>
-                      <td class="px-3 py-1.5 text-right text-gray-500 tabular-nums font-mono">{{ row.volume?.toLocaleString() }}</td>
+                    <tr v-for="row in historyReversed" :key="row.date" class="transition-colors hover:bg-[#F8F9FF]" style="border-bottom:1px solid #EEF1F5">
+                      <td class="px-3 py-1.5 tabular-nums" style="color:#6F7485">{{ row.date }}</td>
+                      <td class="px-3 py-1.5 text-right tabular-nums font-mono" style="color:#0F122B">{{ row.open?.toLocaleString() }}</td>
+                      <td class="px-3 py-1.5 text-right tabular-nums font-mono" style="color:#E5323B">{{ row.high?.toLocaleString() }}</td>
+                      <td class="px-3 py-1.5 text-right tabular-nums font-mono" style="color:#3B7FED">{{ row.low?.toLocaleString() }}</td>
+                      <td class="px-3 py-1.5 text-right font-bold tabular-nums font-mono" style="color:#0F122B">{{ row.close?.toLocaleString() }}</td>
+                      <td class="px-3 py-1.5 text-right tabular-nums font-mono" style="color:#6F7485">{{ row.volume?.toLocaleString() }}</td>
                     </tr>
                   </tbody>
                 </table>
-                <div v-else class="py-8 text-center text-sm text-gray-400">데이터 없음</div>
+                <div v-else class="py-8 text-center text-sm" style="color:#6F7485">데이터 없음</div>
               </div>
             </div>
 
-            <!-- Error -->
-            <div v-else-if="stockDetail?.error" class="bg-white rounded-2xl border border-red-100 p-8 text-center">
-              <p class="text-red-500 font-semibold">데이터를 불러오지 못했습니다</p>
-              <p class="text-sm text-red-400 mt-1">{{ stockDetail.error }}</p>
+            <!-- 에러 -->
+            <div v-else-if="stockDetail?.error" class="rounded-2xl p-8 text-center" style="background:white;border:1px solid #FFD0D0">
+              <p class="font-semibold" style="color:#E5323B">데이터를 불러오지 못했습니다</p>
+              <p class="text-sm mt-1" style="color:#E5323B">{{ stockDetail.error }}</p>
             </div>
 
-            <!-- Empty state -->
-            <div v-else class="bg-white rounded-2xl border border-gray-100 p-16 text-center">
-              <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center mx-auto mb-4">
-                <BarChart2 class="w-8 h-8 text-emerald-500" />
+            <!-- 빈 상태 -->
+            <div v-else class="rounded-2xl p-16 text-center" style="background:white;border:1px solid #EEF1F5">
+              <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style="background:#DFFAF4">
+                <BarChart2 class="w-8 h-8" style="color:#57E0C3" />
               </div>
-              <p class="font-bold text-gray-900 mb-2">종목을 검색하세요</p>
-              <p class="text-sm text-gray-400">티커(AAPL) 또는 회사명(Apple, 삼성전자)으로 검색</p>
+              <p class="font-bold mb-2" style="color:#0F122B">종목을 검색하세요</p>
+              <p class="text-sm" style="color:#6F7485">티커(AAPL) 또는 회사명(Apple, 삼성전자)으로 검색</p>
             </div>
 
-            <!-- ── 실시간 체결가 ── -->
-            <div v-if="trade" class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <!-- 실시간 체결가 -->
+            <div v-if="trade" class="rounded-2xl p-5" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
               <div class="flex items-center gap-2 mb-4">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">실시간 체결</span>
-                <span class="ml-auto text-xs text-gray-400 tabular-nums">{{ trade.time }}</span>
+                <span class="w-2 h-2 rounded-full animate-pulse" style="background:#57E0C3"></span>
+                <span class="font-bold" style="font-size:0.72rem;color:#6F7485;letter-spacing:0.08em">실시간 체결</span>
+                <span class="ml-auto tabular-nums" style="font-size:0.72rem;color:#6F7485">{{ trade.time }}</span>
               </div>
               <div class="flex items-center gap-5 flex-wrap">
                 <div>
-                  <p class="text-xs text-gray-400 mb-0.5">체결가</p>
-                  <span class="text-3xl font-black tabular-nums" :class="signColor(trade.sign)">
-                    {{ trade.price.toLocaleString() }}
-                  </span>
+                  <p class="mb-0.5" style="font-size:0.72rem;color:#6F7485">체결가</p>
+                  <span class="font-black tabular-nums" style="font-size:1.8rem" :class="signColor(trade.sign)">{{ trade.price.toLocaleString() }}</span>
                 </div>
                 <div>
-                  <p class="text-xs text-gray-400 mb-0.5">대비</p>
-                  <p class="text-lg font-bold tabular-nums" :class="signColor(trade.sign)">
+                  <p class="mb-0.5" style="font-size:0.72rem;color:#6F7485">대비</p>
+                  <p class="font-bold text-lg tabular-nums" :class="signColor(trade.sign)">
                     {{ trade.change >= 0 ? '+' : '' }}{{ trade.change.toLocaleString() }}
                     <span class="text-sm">({{ trade.change_rate >= 0 ? '+' : '' }}{{ trade.change_rate }}%)</span>
                   </p>
                 </div>
                 <div>
-                  <p class="text-xs text-gray-400 mb-0.5">체결량</p>
-                  <p class="text-base font-bold text-gray-800 tabular-nums">{{ trade.volume.toLocaleString() }}</p>
+                  <p class="mb-0.5" style="font-size:0.72rem;color:#6F7485">체결량</p>
+                  <p class="font-bold tabular-nums" style="color:#0F122B">{{ trade.volume.toLocaleString() }}</p>
                 </div>
                 <div>
-                  <p class="text-xs text-gray-400 mb-0.5">누적거래량</p>
-                  <p class="text-base font-bold text-gray-800 tabular-nums">{{ trade.acc_volume.toLocaleString() }}</p>
+                  <p class="mb-0.5" style="font-size:0.72rem;color:#6F7485">누적거래량</p>
+                  <p class="font-bold tabular-nums" style="color:#0F122B">{{ trade.acc_volume.toLocaleString() }}</p>
                 </div>
                 <div>
-                  <p class="text-xs text-gray-400 mb-0.5">체결강도</p>
-                  <p class="text-base font-bold tabular-nums" :class="trade.strength >= 100 ? 'text-red-600' : 'text-blue-600'">
-                    {{ trade.strength }}%
-                  </p>
+                  <p class="mb-0.5" style="font-size:0.72rem;color:#6F7485">체결강도</p>
+                  <p class="font-bold tabular-nums" :style="trade.strength >= 100 ? 'color:#E5323B' : 'color:#3B7FED'">{{ trade.strength }}%</p>
                 </div>
                 <div class="ml-auto">
-                  <span
-                    class="text-xs font-bold px-2.5 py-1 rounded-full"
-                    :class="trade.trade_type === '1' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'"
-                  >
-                    {{ trade.trade_type === '1' ? '매수 체결' : '매도 체결' }}
-                  </span>
+                  <span class="text-xs font-bold px-2.5 py-1 rounded-full"
+                    :style="trade.trade_type === '1' ? 'background:#FFF5F5;color:#E5323B' : 'background:#EBF1FF;color:#3B7FED'"
+                  >{{ trade.trade_type === '1' ? '매수 체결' : '매도 체결' }}</span>
                 </div>
               </div>
             </div>
 
-            <!-- ── 실시간 호가 잔량 ── -->
-            <div v-if="orderbook" class="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-              <!-- 헤더 -->
-              <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">호가 잔량 (10호가)</span>
-                <span class="ml-auto text-xs text-gray-400 tabular-nums">{{ orderbook.time }}</span>
+            <!-- 실시간 호가 잔량 -->
+            <div v-if="orderbook" class="rounded-2xl overflow-hidden" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
+              <div class="flex items-center gap-2 px-4 py-3" style="border-bottom:1px solid #EEF1F5">
+                <span class="w-2 h-2 rounded-full animate-pulse" style="background:#57E0C3"></span>
+                <span class="font-bold" style="font-size:0.72rem;color:#6F7485;letter-spacing:0.08em">호가 잔량 (10호가)</span>
+                <span class="ml-auto tabular-nums" style="font-size:0.72rem;color:#6F7485">{{ orderbook.time }}</span>
               </div>
-
-              <!-- 컬럼 레이블 -->
-              <div class="grid grid-cols-3 text-xs font-bold text-gray-400 bg-gray-50 px-4 py-1.5 border-b border-gray-100">
-                <span class="text-red-400">매도 잔량</span>
-                <span class="text-center">가격</span>
-                <span class="text-right text-blue-400">매수 잔량</span>
+              <div class="grid grid-cols-3 font-bold px-4 py-1.5" style="background:#F8F9FF;font-size:0.72rem;border-bottom:1px solid #EEF1F5">
+                <span style="color:#E5323B">매도 잔량</span>
+                <span class="text-center" style="color:#6F7485">가격</span>
+                <span class="text-right" style="color:#3B7FED">매수 잔량</span>
               </div>
-
-              <!-- 매도 10호가 (10위→1위, 높은 가격이 위) -->
-              <div
-                v-for="ask in asksReversed"
-                :key="ask.price"
-                class="grid grid-cols-3 items-center px-4 py-1 border-b border-gray-50 hover:bg-red-50 transition-colors"
+              <div v-for="ask in asksReversed" :key="ask.price"
+                class="grid grid-cols-3 items-center px-4 py-1 transition-colors hover:bg-[#FFF5F5]"
+                style="border-bottom:1px solid #EEF1F5"
               >
-                <!-- 매도 잔량 바 (오른쪽→왼쪽 방향) -->
                 <div class="relative h-6 flex items-center">
-                  <div
-                    class="absolute right-0 top-1 bottom-1 bg-red-100 rounded-sm transition-all duration-150"
-                    :style="{ width: qtyBarWidth(ask.qty, orderbook.asks) + '%' }"
-                  ></div>
-                  <span class="relative z-10 text-xs font-mono text-red-700 tabular-nums">
-                    {{ ask.qty.toLocaleString() }}
-                  </span>
+                  <div class="absolute right-0 top-1 bottom-1 rounded-sm transition-all duration-150" style="background:rgba(229,50,59,0.12)" :style="{ width: qtyBarWidth(ask.qty, orderbook.asks) + '%' }"></div>
+                  <span class="relative z-10 font-mono tabular-nums" style="font-size:0.72rem;color:#E5323B">{{ ask.qty.toLocaleString() }}</span>
                 </div>
-                <!-- 매도가 -->
-                <span class="text-center text-sm font-bold text-red-600 tabular-nums">
-                  {{ ask.price.toLocaleString() }}
-                </span>
+                <span class="text-center font-bold tabular-nums" style="font-size:0.85rem;color:#E5323B">{{ ask.price.toLocaleString() }}</span>
                 <div></div>
               </div>
-
-              <!-- 총계 구분선 -->
-              <div class="grid grid-cols-3 bg-gray-100 px-4 py-1.5 text-xs font-semibold">
-                <span class="text-red-500 tabular-nums">총 {{ orderbook.total_ask_qty.toLocaleString() }}</span>
-                <span class="text-center text-gray-500">[ 스프레드 ]</span>
-                <span class="text-right text-blue-500 tabular-nums">총 {{ orderbook.total_bid_qty.toLocaleString() }}</span>
+              <div class="grid grid-cols-3 px-4 py-1.5 font-semibold" style="background:#F8F9FF;font-size:0.72rem">
+                <span class="tabular-nums" style="color:#E5323B">총 {{ orderbook.total_ask_qty.toLocaleString() }}</span>
+                <span class="text-center" style="color:#6F7485">[ 스프레드 ]</span>
+                <span class="text-right tabular-nums" style="color:#3B7FED">총 {{ orderbook.total_bid_qty.toLocaleString() }}</span>
               </div>
-
-              <!-- 매수 10호가 (1위→10위, 높은 가격이 위) -->
-              <div
-                v-for="(bid, i) in orderbook.bids"
-                :key="'bid-' + i"
-                class="grid grid-cols-3 items-center px-4 py-1 border-b border-gray-50 hover:bg-blue-50 transition-colors"
+              <div v-for="(bid, i) in orderbook.bids" :key="'bid-' + i"
+                class="grid grid-cols-3 items-center px-4 py-1 transition-colors hover:bg-[#EBF1FF]"
+                style="border-bottom:1px solid #EEF1F5"
               >
                 <div></div>
-                <!-- 매수가 -->
-                <span class="text-center text-sm font-bold text-blue-600 tabular-nums">
-                  {{ bid.price.toLocaleString() }}
-                </span>
-                <!-- 매수 잔량 바 (왼쪽→오른쪽 방향) -->
+                <span class="text-center font-bold tabular-nums" style="font-size:0.85rem;color:#3B7FED">{{ bid.price.toLocaleString() }}</span>
                 <div class="relative h-6 flex items-center justify-end">
-                  <div
-                    class="absolute left-0 top-1 bottom-1 bg-blue-100 rounded-sm transition-all duration-150"
-                    :style="{ width: qtyBarWidth(bid.qty, orderbook.bids) + '%' }"
-                  ></div>
-                  <span class="relative z-10 text-xs font-mono text-blue-700 tabular-nums">
-                    {{ bid.qty.toLocaleString() }}
-                  </span>
+                  <div class="absolute left-0 top-1 bottom-1 rounded-sm transition-all duration-150" style="background:rgba(59,127,237,0.12)" :style="{ width: qtyBarWidth(bid.qty, orderbook.bids) + '%' }"></div>
+                  <span class="relative z-10 font-mono tabular-nums" style="font-size:0.72rem;color:#3B7FED">{{ bid.qty.toLocaleString() }}</span>
                 </div>
               </div>
             </div>
 
           </div>
 
-          <!-- ── Sidebar: Watchlist ── -->
+          <!-- 사이드바: 관심 종목 -->
           <div>
-            <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm sticky top-20">
+            <div class="rounded-2xl p-5 sticky top-20" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
               <div class="flex items-center gap-2 mb-4">
-                <Star class="w-4 h-4 text-amber-400 fill-amber-400" />
-                <h2 class="font-bold text-gray-900 text-sm">관심 종목</h2>
-                <span v-if="watchlist.length > 0" class="ml-auto text-xs text-gray-400 font-medium">{{ watchlist.length }}개</span>
+                <Star class="w-4 h-4 fill-amber-400 text-amber-400" />
+                <h2 class="font-bold text-sm" style="color:#0F122B">관심 종목</h2>
+                <span v-if="watchlist.length > 0" class="ml-auto font-medium" style="font-size:0.75rem;color:#6F7485">{{ watchlist.length }}개</span>
               </div>
 
-              <!-- Not logged in -->
               <div v-if="!isLoggedIn" class="text-center py-8">
-                <Star class="w-8 h-8 text-gray-200 fill-gray-200 mx-auto mb-3" />
-                <p class="text-sm text-gray-400 mb-4">로그인하면 관심 종목을<br>저장할 수 있습니다</p>
-                <RouterLink
-                  to="/login"
-                  class="inline-block px-4 py-2 bg-blue-700 text-white text-sm font-semibold rounded-xl hover:bg-blue-800 transition-colors"
-                >
-                  로그인
-                </RouterLink>
+                <Star class="w-8 h-8 mx-auto mb-3" style="color:#EEF1F5;fill:#EEF1F5" />
+                <p class="text-sm mb-4" style="color:#6F7485">로그인하면 관심 종목을<br>저장할 수 있습니다</p>
+                <RouterLink to="/login" class="inline-block px-4 py-2 rounded-xl text-sm font-semibold transition-all" style="background:#0F122B;color:white">로그인</RouterLink>
               </div>
 
-              <!-- Empty watchlist -->
               <div v-else-if="watchlist.length === 0" class="text-center py-8">
-                <Star class="w-8 h-8 text-gray-200 fill-gray-200 mx-auto mb-3" />
-                <p class="text-sm text-gray-400">관심 종목이 없습니다<br>종목 검색 후 ☆ 버튼으로 추가하세요</p>
+                <Star class="w-8 h-8 mx-auto mb-3" style="color:#EEF1F5;fill:#EEF1F5" />
+                <p class="text-sm" style="color:#6F7485">관심 종목이 없습니다<br>종목 검색 후 ☆ 버튼으로 추가하세요</p>
               </div>
 
-              <!-- Watchlist items -->
               <div v-else class="space-y-1">
                 <button
-                  v-for="item in watchlist"
-                  :key="item.symbol"
+                  v-for="item in watchlist" :key="item.symbol"
                   @click="selectStock(item.symbol, item.name)"
                   class="w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left group"
-                  :class="selectedSymbol === item.symbol
-                    ? 'bg-blue-50 border border-blue-200'
-                    : 'hover:bg-gray-50 border border-transparent'"
+                  :style="selectedSymbol === item.symbol ? 'background:#DFFAF4;border:1px solid #57E0C3' : 'border:1px solid transparent'"
                 >
-                  <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-900 flex items-center justify-center text-white text-xs font-black flex-shrink-0">
+                  <div class="w-10 h-10 rounded-xl flex items-center justify-center font-black flex-shrink-0" style="background:#0F122B;color:white;font-size:0.72rem">
                     {{ item.symbol.slice(0, 4) }}
                   </div>
                   <div class="flex-1 min-w-0">
-                    <p class="font-bold text-gray-900 text-sm">{{ item.name }}</p>
-                    <p class="text-xs text-gray-500 truncate">{{ item.symbol }}</p>
+                    <p class="font-bold text-sm" style="color:#0F122B">{{ item.name }}</p>
+                    <p class="text-xs truncate" style="color:#6F7485">{{ item.symbol }}</p>
                   </div>
-                  <button
-                    @click.stop="toggleWatchlist(item.symbol, item.name)"
-                    class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 transition-all p-1 rounded-lg hover:bg-red-50"
-                  >
-                    <X class="w-3.5 h-3.5" />
-                  </button>
+                  <button @click.stop="toggleWatchlist(item.symbol, item.name)"
+                    class="opacity-0 group-hover:opacity-100 p-1 rounded-lg transition-all"
+                    style="color:#6F7485"
+                  ><X class="w-3.5 h-3.5" /></button>
                 </button>
               </div>
             </div>
-
           </div>
 
         </div>
