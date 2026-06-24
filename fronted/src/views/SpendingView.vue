@@ -8,7 +8,7 @@ import {
   CategoryScale, LinearScale, BarElement,
   ArcElement, Title, Tooltip, Legend,
 } from 'chart.js'
-import { TrendingUp, CloudUpload, CircleCheck, CircleAlert, Search, ChevronDown, ChevronRight, Sparkles } from '@lucide/vue'
+import { TrendingUp, CloudUpload, CircleCheck, CircleAlert, Search, ChevronDown, ChevronRight, Sparkles, FileDown, BrainCircuit, Loader2 } from '@lucide/vue'
 import { useAuth } from '@/composables/useAuth'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend)
@@ -103,6 +103,74 @@ async function classifyMisc(onlySaved = false) {
     expandedCategory.value = '기타'
   } catch (e) { classifyErr.value = e.message }
   finally { classifying.value = false }
+}
+
+// ── AI 소비 리포트 ────────────────────────────────────────────────────────
+const reportLoading  = ref(false)
+const reportError    = ref(null)
+const reportText     = ref('')
+const reportLabel    = ref('')
+const pdfLoading     = ref(false)
+
+const reportSections = computed(() => {
+  if (!reportText.value) return []
+  const sections = []
+  let title = null, lines = []
+  for (const line of reportText.value.split('\n')) {
+    if (line.startsWith('## ')) {
+      if (title !== null) sections.push({ title, content: lines.join('\n').trim() })
+      title = line.slice(3).trim(); lines = []
+    } else { lines.push(line) }
+  }
+  if (title !== null) sections.push({ title, content: lines.join('\n').trim() })
+  return sections
+})
+
+const SECTION_ICONS = { '소비 요약': '📊', '주목할 카테고리': '🔍', '소비 패턴': '📅', '절약 팁': '💡', '총평': '⭐' }
+
+async function generateReport() {
+  reportLoading.value = true; reportError.value = null; reportText.value = ''
+  const params = new URLSearchParams({ direction: direction.value })
+  if (isCustom.value) {
+    params.set('start', customStart.value); params.set('end', customEnd.value)
+  } else {
+    params.set('period', period.value)
+  }
+  try {
+    const res  = await authFetch(`/api/spending/ai-report/?${params}`)
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`)
+    reportText.value  = json.report
+    reportLabel.value = json.period_label
+  } catch (e) { reportError.value = e.message }
+  finally { reportLoading.value = false }
+}
+
+async function downloadPdf() {
+  if (!reportText.value) return
+  pdfLoading.value = true
+  const body = { direction: direction.value, report: reportText.value, period_label: reportLabel.value }
+  if (isCustom.value) {
+    body.start = customStart.value; body.end = customEnd.value
+  } else {
+    body.period = period.value
+  }
+  try {
+    const res = await authFetch('/api/spending/report-pdf/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    if (!res.ok) { const j = await res.json(); throw new Error(j.error ?? 'PDF 생성 실패') }
+    const blob = await res.blob()
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href     = url
+    a.download = `소비리포트_${reportLabel.value}.pdf`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) { reportError.value = e.message }
+  finally { pdfLoading.value = false }
 }
 
 onMounted(fetchMapStatus)
@@ -532,6 +600,74 @@ function heatText(intensity) { return intensity > 0.5 ? '#fff' : '#374151' }
             </div>
             <div v-if="!stats.by_category.length" class="text-sm text-gray-300 text-center py-4">데이터 없음</div>
           </div>
+        </div>
+
+        <!-- ── AI 소비 리포트 ──────────────────────────────────────────── -->
+        <div class="mt-8">
+
+          <!-- 헤더 + 생성 버튼 -->
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <BrainCircuit class="w-5 h-5 text-blue-600" />
+              <h2 class="text-base font-black text-gray-900">AI 소비 리포트</h2>
+              <span class="text-xs font-bold text-white bg-blue-600 px-2 py-0.5 rounded-full">Gemini</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button
+                v-if="reportText"
+                @click="downloadPdf"
+                :disabled="pdfLoading"
+                class="flex items-center gap-1.5 px-4 py-2 bg-gray-800 hover:bg-gray-900 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-colors"
+              >
+                <Loader2 v-if="pdfLoading" class="w-3.5 h-3.5 animate-spin" />
+                <FileDown v-else class="w-3.5 h-3.5" />
+                {{ pdfLoading ? 'PDF 생성 중...' : 'PDF 다운로드' }}
+              </button>
+              <button
+                @click="generateReport"
+                :disabled="reportLoading || !stats"
+                class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-700 to-indigo-600 hover:from-blue-800 hover:to-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-sm"
+              >
+                <Loader2 v-if="reportLoading" class="w-3.5 h-3.5 animate-spin" />
+                <Sparkles v-else class="w-3.5 h-3.5" />
+                {{ reportLoading ? 'AI 분석 중...' : (reportText ? '리포트 재생성' : 'AI 리포트 생성') }}
+              </button>
+            </div>
+          </div>
+
+          <!-- 오류 -->
+          <div v-if="reportError" class="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm mb-4">
+            <CircleAlert class="w-4 h-4 flex-shrink-0" />{{ reportError }}
+          </div>
+
+          <!-- 로딩 상태 -->
+          <div v-if="reportLoading" class="bg-white border border-blue-100 rounded-2xl p-8 text-center">
+            <Loader2 class="w-8 h-8 animate-spin text-blue-500 mx-auto mb-3" />
+            <p class="text-sm font-semibold text-gray-500">Gemini AI가 소비 패턴을 분석하고 있습니다...</p>
+            <p class="text-xs text-gray-400 mt-1">약 10~20초 소요됩니다</p>
+          </div>
+
+          <!-- 리포트 결과 -->
+          <div v-else-if="reportSections.length" class="space-y-3">
+            <div
+              v-for="sec in reportSections" :key="sec.title"
+              class="bg-white border border-blue-100 rounded-2xl overflow-hidden shadow-sm"
+            >
+              <div class="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
+                <span class="text-base">{{ SECTION_ICONS[sec.title] ?? '✦' }}</span>
+                <h3 class="text-sm font-black text-blue-900">{{ sec.title }}</h3>
+              </div>
+              <div class="px-5 py-4 text-sm text-gray-700 leading-relaxed whitespace-pre-line">{{ sec.content }}</div>
+            </div>
+          </div>
+
+          <!-- 빈 상태 -->
+          <div v-else-if="!reportLoading && !reportError" class="bg-white border border-dashed border-blue-200 rounded-2xl p-10 text-center">
+            <BrainCircuit class="w-10 h-10 text-blue-200 mx-auto mb-3" />
+            <p class="text-sm font-semibold text-gray-400">AI 리포트 생성 버튼을 눌러</p>
+            <p class="text-sm text-gray-400">현재 기간의 소비 인사이트를 확인하세요.</p>
+          </div>
+
         </div>
 
       </template>

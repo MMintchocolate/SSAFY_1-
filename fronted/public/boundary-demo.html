@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>부산진구 행정구역 경계</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    #map { width: 100%; height: 100vh; }
+
+    /* 상단 정보 패널 */
+    #panel {
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+      background: white; padding: 10px 20px; border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.2); font-family: 'Pretendard', sans-serif;
+      font-size: 14px; font-weight: 600; z-index: 100; white-space: nowrap;
+      display: flex; align-items: center; gap: 8px;
+    }
+    #panel .dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #00AAFF; border: 2px solid #0044FF; flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="panel">
+    <span class="dot"></span>
+    <span id="status">GeoJSON 로딩 중…</span>
+  </div>
+  <div id="map"></div>
+
+  <!-- ① 네이버 지도 JavaScript API v3 CDN 로드 -->
+  <script src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=c158nttv6j"></script>
+
+  <script>
+    /* ===================================================================
+       설정값 — 대상 구역 및 스타일
+    =================================================================== */
+
+    /**
+     * 공개 GeoJSON 데이터 출처:
+     *   vuski/admdongkor (통계청 시군구 경계, 최신 갱신본)
+     *   URL: https://github.com/vuski/admdongkor
+     *
+     * 대안 URL (southkorea-maps):
+     *   https://raw.githubusercontent.com/southkorea/southkorea-maps/master/kostat/2013/json/skorea_municipalities_geo.json
+     */
+    const GEOJSON_URL =
+      'https://raw.githubusercontent.com/vuski/admdongkor/master/ver20230101/SIG_20230101.json';
+
+    /** 필터 기준 — SIG_CD 또는 한국어 명칭 중 하나만 맞아도 OK */
+    const TARGET = {
+      sigCd:   '26230',    // 부산진구 법정동코드(시군구코드)
+      korName: '부산진구',   // 시군구 한국어 명칭 (시·도 포함 없이)
+    };
+
+    /** 폴리곤 스타일 */
+    const POLYGON_STYLE = {
+      strokeColor:   '#0044FF',   // 테두리: 진한 파란색
+      strokeWeight:  3,            // 테두리 두께 3px
+      strokeOpacity: 1.0,
+      fillColor:     '#00AAFF',   // 내부: 하늘색
+      fillOpacity:   0.25,         // 투명도 25%
+    };
+
+
+    /* ===================================================================
+       ② 지도 초기화 (임시 중심: 부산 중구 대략 좌표)
+    =================================================================== */
+    const map = new naver.maps.Map('map', {
+      center: new naver.maps.LatLng(35.18, 129.07),
+      zoom: 12,
+    });
+
+
+    /* ===================================================================
+       ③ GeoJSON 비동기 로드 → 필터링 → 폴리곤 그리기
+    =================================================================== */
+    async function loadAndDraw() {
+      const statusEl = document.getElementById('status');
+
+      try {
+        statusEl.textContent = 'GeoJSON 데이터 불러오는 중…';
+
+        /* fetch로 GeoJSON 파일 로드 */
+        const resp = await fetch(GEOJSON_URL);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status} — GeoJSON 로드 실패`);
+        const geojson = await resp.json();
+
+        /* 부산진구 Feature 하나만 필터링 */
+        const feature = findDistrict(geojson.features);
+        if (!feature) throw new Error('부산진구 Feature를 찾을 수 없습니다. 데이터 속성명을 확인하세요.');
+
+        /* 폴리곤 생성 + bounds 맞추기 */
+        drawDistrict(feature.geometry);
+
+        const label = feature.properties.SIG_KOR_NM
+                   || feature.properties.sig_kor_nm
+                   || feature.properties.name_kor
+                   || TARGET.korName;
+        statusEl.textContent = `부산광역시 ${label}`;
+
+      } catch (err) {
+        statusEl.textContent = `오류: ${err.message}`;
+        console.error('[boundary-demo]', err);
+      }
+    }
+
+
+    /* ===================================================================
+       ④ 필터링 함수
+       - vuski/admdongkor 형식: sig_cd / sig_kor_nm
+       - southkorea-maps 형식: code / name_kor
+       - SGIS(통계청) 형식:    SIG_CD / SIG_KOR_NM
+    =================================================================== */
+    function findDistrict(features) {
+      return features.find(f => {
+        const p = f.properties;
+        return (
+          String(p.SIG_CD)     === TARGET.sigCd   ||   // 정부 공식 형식
+          String(p.sig_cd)     === TARGET.sigCd   ||   // vuski 소문자 형식
+          String(p.code)       === TARGET.sigCd   ||   // southkorea-maps
+          p.SIG_KOR_NM         === TARGET.korName ||
+          p.sig_kor_nm         === TARGET.korName ||
+          p.name_kor           === TARGET.korName
+        );
+      });
+    }
+
+
+    /* ===================================================================
+       ⑤ 좌표 변환 유틸
+       GeoJSON 표준: [경도(lng), 위도(lat)] 순서
+       Naver Maps:   LatLng(위도(lat), 경도(lng)) 순서 — 반드시 swap
+    =================================================================== */
+    function ringToLatLngs(ring, bounds) {
+      return ring.map(([lng, lat]) => {
+        const ll = new naver.maps.LatLng(lat, lng);
+        bounds.extend(ll);   // bounds 확장 (fitBounds 용)
+        return ll;
+      });
+    }
+
+
+    /* ===================================================================
+       ⑥ 폴리곤 생성 + fitBounds
+       Polygon / MultiPolygon 모두 처리
+    =================================================================== */
+    function drawDistrict(geometry) {
+      /* 전체 좌표를 담을 Bounds 객체 */
+      const bounds = new naver.maps.LatLngBounds();
+
+      /* 폴리곤 공통 옵션 */
+      const baseOpts = { map, ...POLYGON_STYLE };
+
+      if (geometry.type === 'Polygon') {
+        /*
+         * Polygon: coordinates = [outerRing, hole1, hole2, ...]
+         * paths 에 배열 그대로 전달하면 Naver가 holes 처리
+         */
+        const paths = geometry.coordinates.map(ring => ringToLatLngs(ring, bounds));
+        new naver.maps.Polygon({ ...baseOpts, paths });
+
+      } else if (geometry.type === 'MultiPolygon') {
+        /*
+         * MultiPolygon: coordinates = [polygon1, polygon2, ...]
+         * 각 sub-polygon을 별도 naver.maps.Polygon으로 생성
+         */
+        geometry.coordinates.forEach(subPolygon => {
+          const paths = subPolygon.map(ring => ringToLatLngs(ring, bounds));
+          new naver.maps.Polygon({ ...baseOpts, paths });
+        });
+      } else {
+        throw new Error(`지원하지 않는 geometry type: ${geometry.type}`);
+      }
+
+      /*
+       * ⑥-b. fitBounds — 폴리곤 영역이 화면에 꽉 차도록 뷰포트 이동
+       * padding: 화면 가장자리 여백(px)
+       */
+      map.fitBounds(bounds, { padding: 60 });
+    }
+
+
+    /* ===================================================================
+       실행
+    =================================================================== */
+    loadAndDraw();
+  </script>
+</body>
+</html>

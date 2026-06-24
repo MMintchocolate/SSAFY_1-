@@ -1,1 +1,5 @@
-{"vue.server.hybridMode": false}
+{
+  "vue.server.hybridMode": false,
+  "typescript.validate.enable": false,
+  "javascript.validate.enable": false
+}

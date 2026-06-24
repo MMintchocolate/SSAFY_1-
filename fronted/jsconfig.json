@@ -5,6 +5,7 @@
     "noImplicitAny": false,
     "checkJs": false
   },
+  "include": ["src/**/*"],
   "vueCompilerOptions": {
     "strictTemplates": false
   },

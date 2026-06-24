@@ -22,7 +22,7 @@ async function submit() {
   loading.value = true
   try {
     await login(username.value.trim(), password.value)
-    router.push('/')
+    router.push('/app/home')
   } catch (err) {
     errorMsg.value = err?.error || '로그인에 실패했습니다.'
   } finally {

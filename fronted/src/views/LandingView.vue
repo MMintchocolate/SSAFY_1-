@@ -63,7 +63,7 @@ const services = [
 ]
 
 function goStart() {
-  router.push(localStorage.getItem('access') ? '/app/home' : '/login')
+  router.push('/app/home')
 }
 </script>
 

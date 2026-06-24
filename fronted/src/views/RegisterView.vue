@@ -29,7 +29,7 @@ async function submit() {
   loading.value = true
   try {
     await register(username.value.trim(), email.value.trim(), password.value, password2.value)
-    router.push('/')
+    router.push('/app/home')
   } catch (err) {
     errors.value = err
   } finally {

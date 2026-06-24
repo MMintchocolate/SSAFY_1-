@@ -41,3 +41,12 @@ class PostWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Post
         fields = ['id', 'board_type', 'title', 'content']
+
+
+class MyCommentSerializer(serializers.ModelSerializer):
+    post_id    = serializers.IntegerField(source='post.id', read_only=True)
+    post_title = serializers.CharField(source='post.title', read_only=True)
+
+    class Meta:
+        model = Comment
+        fields = ['id', 'post_id', 'post_title', 'content', 'created_at']

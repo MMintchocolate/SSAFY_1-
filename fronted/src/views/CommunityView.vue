@@ -86,7 +86,10 @@ const writeLoading   = ref(false)
 const writeForm      = ref({ board_type: 'stock', title: '', content: '' })
 
 function openWriteForm() {
-  if (!isLoggedIn.value) { router.push('/login'); return }
+  if (!isLoggedIn.value) {
+    router.replace({ query: { ...route.query, loginRequired: '1' } })
+    return
+  }
   editingPost.value  = null
   writeForm.value    = { board_type: activeBoard.value, title: '', content: '' }
   showWriteForm.value = true

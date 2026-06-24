@@ -1,10 +1,12 @@
 import json
 import re
+import requests as req
 from datetime import datetime, timedelta
 from pathlib import Path
 
 import numpy as np
 import yfinance as yf
+from django.conf import settings
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -236,6 +238,135 @@ def ml_predict(request):
     except Exception as e:
         import traceback; traceback.print_exc()
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+FEAT_KR = {
+    'feat_ma_ratio':    'MA50/MA200 비율 (1↑=상승추세)',
+    'feat_rsi':         'RSI 14일 (30↓매수, 70↑매도)',
+    'feat_macd_hist':   'MACD 히스토그램 (양수=상승모멘텀)',
+    'feat_bb_pos':      '볼린저 밴드 위치 (0=하단, 1=상단)',
+    'feat_return_1d':   '1일 수익률',
+    'feat_return_3d':   '3일 수익률',
+    'feat_return_5d':   '5일 수익률',
+    'feat_vol_ratio':   '거래량 비율 (5일 평균 대비)',
+    'feat_usd_idx_chg': '달러지수 일변화율',
+    'feat_us_10y_chg':  '미국 10년 금리 일변화율',
+}
+
+
+@api_view(['GET'])
+def ml_explain(request):
+    """
+    GET /api/stocks/ml/explain/?symbol=TSLA
+    ML 예측 결과 + Gemini 근거 설명 반환.
+    """
+    symbol = request.GET.get('symbol', '').strip().upper()
+    if not symbol:
+        return Response({'error': 'symbol 파라미터가 필요합니다.'}, status=400)
+
+    model_path, meta_path = _paths(symbol)
+    if not model_path.exists():
+        return Response({'error': f'{symbol} 모델 없음. 먼저 학습하세요.'}, status=400)
+
+    try:
+        import joblib
+        model  = joblib.load(model_path)
+        ticker = _yf_ticker(symbol)
+        end    = datetime.today()
+        start  = end - timedelta(days=500)
+
+        base    = _fetch_raw(ticker, start, end)
+        base    = _build_features(base)
+        feat_df = base[FEAT_COLS].dropna()
+
+        if feat_df.empty:
+            return Response({'error': '피처 계산 실패'}, status=500)
+
+        row     = feat_df.iloc[[-1]]
+        pred    = int(model.predict(row)[0])
+        proba   = model.predict_proba(row)[0].tolist()
+        classes = [int(c) for c in model.classes_]
+
+        label_map  = {0: '관망', 1: '매수', 2: '매도/보류'}
+        proba_dict = {c: round(p * 100, 1) for c, p in zip(classes, proba)}
+
+        # 피처 값 (오늘)
+        feat_vals = {f: round(float(row[f].iloc[0]), 6) for f in FEAT_COLS}
+
+        # 모델 피처 중요도 (학습 기준)
+        feat_imp = sorted(
+            zip(FEAT_COLS, model.feature_importances_),
+            key=lambda x: x[1], reverse=True,
+        )
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+    # ── Gemini 프롬프트 ────────────────────────────────────────────────
+    signal_label = label_map.get(pred, '?')
+    p_vals = {label_map.get(c, c): p for c, p in proba_dict.items()}
+
+    feat_lines = '\n'.join(
+        f'  - {FEAT_KR[f]}: {feat_vals[f]:+.4f}' for f in FEAT_COLS
+    )
+    imp_lines = '\n'.join(
+        f'  {i+1}. {FEAT_KR[f]} (중요도 {int(imp)})'
+        for i, (f, imp) in enumerate(feat_imp[:5])
+    )
+
+    prompt = f"""당신은 머신러닝 모델의 예측 결과를 쉽게 해설하는 전문가입니다.
+
+아래는 LightGBM 모델이 {symbol} 종목에 대해 오늘 예측한 매매 시그널입니다.
+
+[예측 결과]
+- 시그널: {signal_label}
+- 확률: 관망 {proba_dict.get(0, 0)}% / 매수 {proba_dict.get(1, 0)}% / 매도 {proba_dict.get(2, 0)}%
+
+[오늘의 지표 피처 값]
+{feat_lines}
+
+[모델이 가장 중요하게 보는 피처 TOP 5 (학습 기준)]
+{imp_lines}
+
+[모델 학습 기준]
+- 익절 조건: 5일 내 +5% 이상 → 매수(1)
+- 손절 조건: 5일 내 -2.5% 이하 → 매도/보류(2)
+- 그 외 → 관망(0)
+
+다음 형식으로 오늘 '{signal_label}' 을 예측한 이유를 투자자가 이해하기 쉽게 설명해 주세요:
+
+## 예측 근거
+오늘의 지표 값과 모델 중요도를 바탕으로, 예측에 가장 크게 기여한 3~4가지 요인을 구체적인 수치와 함께 설명합니다.
+
+## 시그널 신뢰도
+예측 확률 분포와 지표 일관성을 바탕으로 이 예측의 신뢰 수준을 평가합니다.
+
+## 반대 시그널 주의
+현재 {signal_label} 예측과 반대 방향을 가리키는 지표가 있다면 함께 설명합니다.
+
+마지막 줄에 '본 예측은 과거 데이터 기반 통계 모델이며 미래 수익을 보장하지 않습니다.'라고 명시하세요."""
+
+    try:
+        gms_base = 'https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta/models'
+        res = req.post(
+            f'{gms_base}/{settings.GMS_MODEL}:generateContent',
+            headers={'Content-Type': 'application/json', 'x-goog-api-key': settings.GMS_KEY},
+            json={'contents': [{'parts': [{'text': prompt}]}]},
+            timeout=60,
+        )
+        res.raise_for_status()
+        explanation = res.json()['candidates'][0]['content']['parts'][0]['text'].strip()
+    except Exception as e:
+        return Response({'error': f'AI 설명 생성 실패: {e}'}, status=502)
+
+    return Response({
+        'symbol':        symbol,
+        'signal':        pred,
+        'signal_label':  signal_label,
+        'probabilities': proba_dict,
+        'feat_values':   feat_vals,
+        'latest_date':   str(base.index[-1].date()),
+        'explanation':   explanation,
+    })
 
 
 @api_view(['GET'])

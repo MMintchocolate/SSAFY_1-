@@ -10,4 +10,6 @@ urlpatterns = [
     path('posts/<int:post_pk>/comments/',         views.comment_list,   name='comment-list'),
     path('posts/<int:post_pk>/comments/create/',  views.comment_create, name='comment-create'),
     path('posts/<int:post_pk>/comments/<int:pk>/delete/', views.comment_delete, name='comment-delete'),
+    path('my/posts/',    views.my_posts,    name='my-posts'),
+    path('my/comments/', views.my_comments, name='my-comments'),
 ]

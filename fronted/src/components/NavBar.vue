@@ -17,7 +17,8 @@ const navLinks = [
   { label: '금융상품', to: '/products' },
   { label: '지점찾기', to: '/branches' },
   { label: '지출분석', to: '/spending' },
-  { label: '보안뉴스', to: '/news' },
+  { label: '금 시세',  to: '/app/gold' },
+  { label: '뉴스',     to: '/news' },
 ]
 
 const stockSubLinks = [

@@ -1,9 +1,12 @@
 import json
 import re
 import requests
+from datetime import datetime
 from pathlib import Path
 
 from django.conf import settings
+from django.http import HttpResponse
+from django.template.loader import render_to_string
 from rest_framework.decorators import api_view, parser_classes, permission_classes
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
@@ -220,6 +223,156 @@ def add_mapping(request):
         _apply_map(_df_cache, {merchant_name: category})
     return Response({'success': True, 'merchant': merchant_name, 'category': category,
                      'saved_map_size': len(_load_map())})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def ai_report(request):
+    """지출 stats → Gemini AI 소비 리포트 텍스트 생성"""
+    period    = request.query_params.get('period', 'this_month')
+    start     = request.query_params.get('start')
+    end       = request.query_params.get('end')
+    direction = request.query_params.get('direction', 'out')
+
+    try:
+        result = aggregate_data(_get_df(), period, start, end, direction)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+    if result['summary']['total'] == 0:
+        return Response({'error': '분석할 지출 데이터가 없습니다.'}, status=400)
+
+    period_labels = {
+        'this_week':    '이번 주',
+        'this_month':   '이번 달',
+        'last_month':   '지난 달',
+        'last_3months': '최근 3개월',
+    }
+    period_label = period_labels.get(period, f'{start} ~ {end}')
+
+    s       = result['summary']
+    by_cat  = result['by_category']
+    daily   = result['daily']
+
+    cat_lines = '\n'.join(
+        f'- {c["category"]}: {c["amount"]:,}원 ({c["ratio"]}%, {c["count"]}건)'
+        for c in by_cat[:10]
+    )
+    top_days = sorted(daily, key=lambda x: x['amount'], reverse=True)[:5]
+    day_lines = '\n'.join(f'- {d["date"]}: {d["amount"]:,}원' for d in top_days)
+
+    prompt = f"""당신은 친절한 개인 재무 컨설턴트입니다.
+아래는 사용자의 {period_label} {'지출' if direction == 'out' else '수입'} 데이터입니다. 이를 바탕으로 자연스럽고 친근한 한국어 소비 리포트를 작성해주세요.
+
+[기간] {period_label}
+[총액] {s['total']:,}원 / [일평균] {s['daily_avg']:,}원 / [건수] {s['count']}건
+[최다 지출일] {s['max_day']['date']} ({s['max_day']['amount']:,}원)
+
+[카테고리별 지출]
+{cat_lines}
+
+[지출 많은 날 TOP 5]
+{day_lines}
+
+다음 형식으로 각 섹션을 작성하세요. 섹션 제목은 정확히 아래대로 사용하세요:
+
+## 소비 요약
+이번 기간 전체 소비 현황을 2~3문장으로 요약합니다.
+
+## 주목할 카테고리
+비중이 가장 큰 카테고리 1~2개를 구체적인 수치와 함께 분석합니다.
+
+## 소비 패턴
+지출이 집중된 시기나 특이한 패턴을 데이터 기반으로 설명합니다.
+
+## 절약 팁
+데이터 기반으로 구체적인 절약 방법 2가지를 제안합니다.
+
+## 총평
+한두 문장으로 이번 소비에 대한 전체 평가와 격려의 말을 씁니다."""
+
+    try:
+        res = requests.post(
+            f'{GMS_BASE}/{settings.GMS_MODEL}:generateContent',
+            headers={'Content-Type': 'application/json', 'x-goog-api-key': settings.GMS_KEY},
+            json={'contents': [{'parts': [{'text': prompt}]}]},
+            timeout=60,
+        )
+        res.raise_for_status()
+        text = res.json()['candidates'][0]['content']['parts'][0]['text'].strip()
+    except Exception as e:
+        return Response({'error': f'AI 리포트 생성 실패: {e}'}, status=502)
+
+    return Response({
+        'report':       text,
+        'stats':        result,
+        'period_label': period_label,
+        'direction':    direction,
+    })
+
+
+def _parse_report_sections(text):
+    sections, current_title, current_lines = [], None, []
+    for line in text.split('\n'):
+        if line.startswith('## '):
+            if current_title is not None:
+                sections.append({'title': current_title, 'content': '\n'.join(current_lines).strip()})
+            current_title, current_lines = line[3:].strip(), []
+        else:
+            current_lines.append(line)
+    if current_title is not None:
+        sections.append({'title': current_title, 'content': '\n'.join(current_lines).strip()})
+    return sections
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def spending_report_pdf(request):
+    """지출 데이터 + AI 리포트 텍스트 → PDF 다운로드"""
+    from playwright.sync_api import sync_playwright
+
+    period       = request.data.get('period', 'this_month')
+    start        = request.data.get('start')
+    end          = request.data.get('end')
+    direction    = request.data.get('direction', 'out')
+    report_text  = request.data.get('report', '')
+    period_label = request.data.get('period_label', '')
+
+    try:
+        result = aggregate_data(_get_df(), period, start, end, direction)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+    palette = ['#6366f1','#f43f5e','#f59e0b','#10b981','#3b82f6',
+               '#a855f7','#ef4444','#14b8a6','#f97316','#84cc16']
+    by_cat  = [dict(c, color=palette[i % len(palette)])
+               for i, c in enumerate(result['by_category'])]
+
+    html_string = render_to_string('spending/spending_report.html', {
+        'period_label': period_label,
+        'direction':    '지출' if direction == 'out' else '수입',
+        'summary':      result['summary'],
+        'by_category':  by_cat,
+        'monthly':      result['monthly'],
+        'sections':     _parse_report_sections(report_text),
+        'generated_at': datetime.now().strftime('%Y년 %m월 %d일'),
+    })
+
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page    = browser.new_page()
+            page.set_content(html_string, wait_until='networkidle')
+            pdf_bytes = page.pdf(format='A4', print_background=True)
+            browser.close()
+    except Exception as e:
+        return Response({'error': f'PDF 생성 실패: {e}'}, status=500)
+
+    from urllib.parse import quote
+    filename = f"소비리포트_{period_label}.pdf"
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = f"attachment; filename*=UTF-8''{quote(filename)}"
+    return response
 
 
 @api_view(['GET'])

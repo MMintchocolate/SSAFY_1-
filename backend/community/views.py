@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from .models import Post, Comment
 from .serializers import (
     PostListSerializer, PostDetailSerializer,
-    PostWriteSerializer, CommentSerializer,
+    PostWriteSerializer, CommentSerializer, MyCommentSerializer,
 )
 
 PAGE_SIZE = 20
@@ -108,3 +108,21 @@ def comment_delete(request, post_pk, pk):
         return Response({'detail': '권한이 없습니다.'}, status=status.HTTP_403_FORBIDDEN)
     comment.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ── My posts / comments ───────────────────────────────────────────────────────
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def my_posts(request):
+    posts = Post.objects.filter(author=request.user)[:30]
+    serializer = PostListSerializer(posts, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def my_comments(request):
+    comments = Comment.objects.filter(author=request.user).select_related('post')[:30]
+    serializer = MyCommentSerializer(comments, many=True)
+    return Response(serializer.data)

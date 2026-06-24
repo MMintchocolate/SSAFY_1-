@@ -3,27 +3,13 @@
 import { ref, computed, onMounted } from 'vue'
 import NavBar from '@/components/NavBar.vue'
 import AppFooter from '@/components/AppFooter.vue'
-import { Scatter } from 'vue-chartjs'
 import {
-  Chart as ChartJS,
-  LinearScale, PointElement, Tooltip, Legend,
-} from 'chart.js'
-import {
-  Newspaper, ExternalLink, ChevronDown, ChevronUp,
+  Newspaper, ExternalLink, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
   Loader2, AlertTriangle, DatabaseZap, Search, X,
-  Layers, TrendingUp, CircleDot, Sparkles, BookOpen,
+  Sparkles, BookOpen, Crown,
 } from '@lucide/vue'
 
-ChartJS.register(LinearScale, PointElement, Tooltip, Legend)
-
-// ─── 페이지 탭 ─────────────────────────────────────────────────────────────────
-const PAGE_TABS = [
-  { key: 'list',    label: '뉴스 목록' },
-  { key: 'cluster', label: '군집 분석' },
-]
-const pageTab = ref('list')
-
-// ─── 키워드 관리 (localStorage 영속) ────────────────────────────────────────
+// ─── 키워드 관리 ────────────────────────────────────────────────────────────
 const DEFAULT_KWS = ['유출', '해킹', '주식']
 const MAX_KWS = 3
 
@@ -46,48 +32,68 @@ function addKeyword() {
 function removeKeyword(kw) {
   userKeywords.value = userKeywords.value.filter(k => k !== kw)
   saveKws()
-  if (activeKeyword.value === kw) { activeKeyword.value = ''; loadNews() }
   if (clusterKeyword.value === kw) clusterKeyword.value = ''
+  loadStats()
 }
 function resetKeywords() {
-  userKeywords.value = [...DEFAULT_KWS]; saveKws()
-  activeKeyword.value = ''; loadNews(); loadStats()
+  userKeywords.value = [...DEFAULT_KWS]
+  saveKws()
+  clusterKeyword.value = ''
+  loadStats()
 }
-
-// ─── 키워드 탭 (computed) ─────────────────────────────────────────────────────
-const keywordTabs = computed(() => [
-  { key: '', label: '전체' },
-  ...userKeywords.value.map(k => ({ key: k, label: k })),
-])
 
 // ─── 요약 상태 ───────────────────────────────────────────────────────────────
 const summaryState = ref({})
 
 // ─── 뉴스 목록 상태 ──────────────────────────────────────────────────────────
-const activeKeyword = ref('')
 const newsList      = ref([])
 const stats         = ref({ total: 0 })
 const loading       = ref(false)
 const crawling      = ref(false)
 const errorMsg      = ref('')
-const expandedId    = ref(null)
-const searchQ       = ref('')
+const expandedTopId = ref(null)
+const activeSection = ref(userKeywords.value[0] ?? '')
+const selectedNews  = ref(null)
 
-// ─── 군집 분석 상태 ──────────────────────────────────────────────────────────
-const clusterKeyword  = ref('')
-const clusterResult   = ref(null)
-const clusterLoading  = ref(false)
-const clusterError    = ref('')
-const clusterEps      = ref(0.45)
-const clusterMinSamp  = ref(2)
+function openModal(news)  { selectedNews.value = news }
+function closeModal()     { selectedNews.value = null }
+
+// ─── Top 3 + 주제별 그룹 ─────────────────────────────────────────────────────
+const topNews = computed(() => newsList.value.slice(0, 3))
+
+const byKeyword = computed(() => {
+  const groups = {}
+  for (const kw of userKeywords.value) {
+    groups[kw] = newsList.value.filter(n => n.keyword === kw)
+  }
+  return groups
+})
+
+// ─── 주제별 페이지네이션 ──────────────────────────────────────────────────────
+const KWITEMS = 6
+const kwPages = ref({})
+
+function getPage(kw)  { return kwPages.value[kw] ?? 1 }
+function totalPages(kw) {
+  return Math.max(1, Math.ceil((byKeyword.value[kw]?.length ?? 0) / KWITEMS))
+}
+function pagedItems(kw) {
+  const p = getPage(kw)
+  return (byKeyword.value[kw] ?? []).slice((p - 1) * KWITEMS, p * KWITEMS)
+}
+function prevPage(kw) { if (getPage(kw) > 1) kwPages.value[kw] = getPage(kw) - 1 }
+function nextPage(kw) { if (getPage(kw) < totalPages(kw)) kwPages.value[kw] = getPage(kw) + 1 }
+
+function toggleExpandTop(id) {
+  expandedTopId.value = expandedTopId.value === id ? null : id
+}
 
 // ─── 뉴스 목록 API ─────────────────────────────────────────────────────────────
 async function loadNews() {
   loading.value  = true
   errorMsg.value = ''
   try {
-    const qs  = activeKeyword.value ? `?keyword=${encodeURIComponent(activeKeyword.value)}` : ''
-    const res = await fetch(`/api/news/${qs}`)
+    const res = await fetch('/api/news/')
     if (!res.ok) throw new Error(`서버 오류 (${res.status})`)
     newsList.value = await res.json()
   } catch (e) {
@@ -129,16 +135,6 @@ async function startCrawl() {
   }
 }
 
-async function setKeywordTab(key) {
-  activeKeyword.value = key
-  expandedId.value    = null
-  await loadNews()
-}
-
-function toggleExpand(id) {
-  expandedId.value = expandedId.value === id ? null : id
-}
-
 // ─── AI 요약 ──────────────────────────────────────────────────────────────────
 async function requestSummary(news) {
   if (summaryState.value[news.id]?.loading) return
@@ -151,7 +147,6 @@ async function requestSummary(news) {
       throw new Error(msg)
     }
     const data = await res.json()
-    // newsList에서 해당 항목의 summary 업데이트
     const target = newsList.value.find(n => n.id === news.id)
     if (target) target.summary = data.summary
     summaryState.value[news.id] = { loading: false, error: '' }
@@ -160,95 +155,10 @@ async function requestSummary(news) {
   }
 }
 
-const filtered = computed(() => {
-  const q = searchQ.value.trim().toLowerCase()
-  if (!q) return newsList.value
-  return newsList.value.filter(
-    n => n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q)
-  )
-})
-
-// ─── 군집 분석 API ─────────────────────────────────────────────────────────────
-async function runCluster() {
-  clusterLoading.value = true
-  clusterError.value   = ''
-  clusterResult.value  = null
-  try {
-    const params = new URLSearchParams({
-      eps:         clusterEps.value,
-      min_samples: clusterMinSamp.value,
-    })
-    if (clusterKeyword.value) params.set('keyword', clusterKeyword.value)
-    const res  = await fetch(`/api/news/cluster/?${params}`)
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.error || '군집화 실패')
-    clusterResult.value = data
-  } catch (e) {
-    clusterError.value = e.message
-  } finally {
-    clusterLoading.value = false
-  }
-}
-
-// ─── Scatter 차트 데이터 ──────────────────────────────────────────────────────
-const scatterData = computed(() => {
-  if (!clusterResult.value) return { datasets: [] }
-
-  const byCluster = {}
-  for (const p of clusterResult.value.points) {
-    const key = p.cluster
-    if (!byCluster[key]) {
-      byCluster[key] = {
-        label:           key < 0 ? '노이즈' : `군집 ${key}`,
-        data:            [],
-        backgroundColor: p.color + 'cc',
-        borderColor:     p.color,
-        pointRadius:     key < 0 ? 4 : 6,
-        pointHoverRadius: 8,
-      }
-    }
-    byCluster[key].data.push({ x: p.x, y: p.y, title: p.title, keyword: p.keyword })
-  }
-
-  // 노이즈(-1) 를 맨 마지막으로
-  const ordered = Object.entries(byCluster)
-    .sort(([a], [b]) => Number(a) - Number(b))
-    .map(([, ds]) => ds)
-  const noiseIdx = ordered.findIndex(d => d.label === '노이즈')
-  if (noiseIdx > -1) ordered.push(ordered.splice(noiseIdx, 1)[0])
-
-  return { datasets: ordered }
-})
-
-const scatterOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      position: 'bottom',
-      labels: { boxWidth: 12, font: { size: 11 } },
-    },
-    tooltip: {
-      callbacks: {
-        label: (ctx) => {
-          const { title, keyword } = ctx.raw
-          return [`[${keyword}] ${title.length > 50 ? title.slice(0, 50) + '…' : title}`]
-        },
-      },
-    },
-  },
-  scales: {
-    x: { display: false },
-    y: { display: false },
-  },
-}
-
-// ─── 공통 유틸 ────────────────────────────────────────────────────────────────
+// ─── 유틸 ────────────────────────────────────────────────────────────────────
 function fmtDate(iso) {
   if (!iso) return '날짜 없음'
-  return new Date(iso).toLocaleDateString('ko-KR', {
-    year: 'numeric', month: 'long', day: 'numeric',
-  })
+  return new Date(iso).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
 const KW_COLORS = [
@@ -261,22 +171,24 @@ function keywordColor(kw) {
   return KW_COLORS[idx >= 0 ? idx % KW_COLORS.length : 0]
 }
 
-const RANK_LABELS = ['1위', '2위', '3위']
-const RANK_STYLES = [
-  'from-blue-50 border-blue-200',
-  'from-emerald-50 border-emerald-200',
-  'from-amber-50 border-amber-200',
+const KW_SECTION_COLORS = [
+  { border: 'border-orange-300', bg: 'bg-orange-500', text: 'text-orange-700', light: 'bg-orange-50' },
+  { border: 'border-red-300',    bg: 'bg-red-500',    text: 'text-red-700',    light: 'bg-red-50'    },
+  { border: 'border-blue-300',   bg: 'bg-blue-500',   text: 'text-blue-700',   light: 'bg-blue-50'   },
 ]
-const RANK_BADGE  = [
-  'bg-blue-600 text-white',
-  'bg-emerald-600 text-white',
-  'bg-amber-500 text-white',
-]
+function sectionColor(kw) {
+  const idx = userKeywords.value.indexOf(kw)
+  return KW_SECTION_COLORS[idx >= 0 ? idx % KW_SECTION_COLORS.length : 0]
+}
 
-onMounted(() => {
-  loadNews()
-  loadStats()
-})
+const TOP_STYLES = [
+  { outer: 'border-amber-200 bg-gradient-to-b from-amber-50 to-white', badge: 'bg-amber-500 text-white', sep: 'border-amber-100' },
+  { outer: 'border-slate-200 bg-gradient-to-b from-slate-50 to-white', badge: 'bg-slate-500 text-white', sep: 'border-slate-100' },
+  { outer: 'border-orange-200 bg-gradient-to-b from-orange-50 to-white', badge: 'bg-orange-400 text-white', sep: 'border-orange-100' },
+]
+const TOP_RANKS = ['1위', '2위', '3위']
+
+onMounted(() => { loadNews(); loadStats() })
 </script>
 
 <template>
@@ -285,13 +197,13 @@ onMounted(() => {
 
     <main class="max-w-5xl mx-auto px-4 sm:px-6 pt-24 pb-20">
 
-      <!-- ─── 헤더 ────────────────────────────────────────────────────────── -->
+      <!-- ─── 헤더 ───────────────────────────────────────────────────────── -->
       <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
         <div>
           <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-100 mb-3">
             <Newspaper class="w-7 h-7 text-blue-700" />
           </div>
-          <h1 class="text-3xl font-black text-gray-900">보안 뉴스</h1>
+          <h1 class="text-3xl font-black text-gray-900">뉴스</h1>
           <p class="text-gray-500 text-sm mt-1">
             네이버 뉴스에서 수집한 최신 이슈 ({{ userKeywords.join(' · ') }})
           </p>
@@ -302,13 +214,11 @@ onMounted(() => {
             <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-gray-600">
               전체 <strong class="text-gray-800">{{ stats.total }}</strong>건
             </span>
-            <span v-for="(kw, i) in userKeywords" :key="kw"
+            <span
+              v-for="(kw, i) in userKeywords" :key="kw"
               class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-medium"
-              :class="[
-                i === 0 ? 'bg-orange-50 text-orange-700' :
-                i === 1 ? 'bg-red-50 text-red-700' :
-                          'bg-blue-50 text-blue-700'
-              ]">
+              :class="i === 0 ? 'bg-orange-50 text-orange-700' : i === 1 ? 'bg-red-50 text-red-700' : 'bg-blue-50 text-blue-700'"
+            >
               {{ kw }} <strong>{{ stats[kw] ?? 0 }}</strong>건
             </span>
           </div>
@@ -316,9 +226,7 @@ onMounted(() => {
             @click="startCrawl"
             :disabled="crawling"
             class="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm"
-            :class="crawling
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              : 'bg-gradient-to-r from-blue-900 to-blue-600 text-white hover:from-blue-950 hover:to-blue-700'"
+            :class="crawling ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-blue-900 to-blue-600 text-white hover:from-blue-950 hover:to-blue-700'"
           >
             <Loader2 v-if="crawling" class="w-4 h-4 animate-spin" />
             <DatabaseZap v-else class="w-4 h-4" />
@@ -327,27 +235,6 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- ─── 페이지 탭 ──────────────────────────────────────────────────── -->
-      <div class="flex gap-1 p-1 bg-white border border-gray-200 rounded-xl shadow-sm mb-6 w-fit">
-        <button
-          v-for="tab in PAGE_TABS" :key="tab.key"
-          @click="pageTab = tab.key"
-          class="flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-semibold transition-all"
-          :class="pageTab === tab.key
-            ? 'bg-blue-700 text-white shadow'
-            : 'text-gray-600 hover:bg-gray-100'"
-        >
-          <Newspaper v-if="tab.key === 'list'"    class="w-4 h-4" />
-          <Layers    v-if="tab.key === 'cluster'" class="w-4 h-4" />
-          {{ tab.label }}
-        </button>
-      </div>
-
-      <!-- ═══════════════════════════════════════════════════════════════════ -->
-      <!--  뉴스 목록 탭                                                       -->
-      <!-- ═══════════════════════════════════════════════════════════════════ -->
-      <template v-if="pageTab === 'list'">
-
         <!-- 오류 배너 -->
         <div v-if="errorMsg"
           class="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl mb-5 text-red-700 text-sm"
@@ -355,343 +242,349 @@ onMounted(() => {
           <AlertTriangle class="w-5 h-5 flex-shrink-0" />{{ errorMsg }}
         </div>
 
-        <!-- 키워드 탭 + 검색 -->
-        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
-          <div class="flex items-center gap-2 flex-wrap">
-            <div class="flex gap-1 p-1 bg-white border border-gray-200 rounded-xl shadow-sm">
-              <button
-                v-for="tab in keywordTabs" :key="tab.key"
-                @click="setKeywordTab(tab.key)"
-                class="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all"
-                :class="activeKeyword === tab.key
-                  ? 'bg-blue-700 text-white shadow'
-                  : 'text-gray-600 hover:bg-gray-100'"
-              >{{ tab.label }}</button>
-            </div>
-            <!-- 키워드 관리 버튼 -->
-            <button @click="kwPanelOpen = !kwPanelOpen"
-              class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all"
-              :class="kwPanelOpen ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-500 hover:border-blue-200 hover:text-blue-600'">
-              <Search class="w-3.5 h-3.5" />키워드 설정
-            </button>
-          </div>
-          <div class="relative w-full sm:w-64">
-            <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input v-model="searchQ" type="text" placeholder="제목 / 본문 검색..."
-              class="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
-          </div>
+        <!-- 키워드 관리 버튼 -->
+        <div class="flex justify-end mb-4">
+          <button
+            @click="kwPanelOpen = !kwPanelOpen"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all"
+            :class="kwPanelOpen ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-500 hover:border-blue-200 hover:text-blue-600'"
+          >
+            <Search class="w-3.5 h-3.5" />키워드 설정
+          </button>
         </div>
 
         <!-- 키워드 관리 패널 -->
         <div v-if="kwPanelOpen"
-          class="bg-white border border-blue-100 rounded-2xl shadow-sm p-4 mb-4 space-y-3">
+          class="bg-white border border-blue-100 rounded-2xl shadow-sm p-4 mb-5 space-y-3"
+        >
           <div class="flex items-center justify-between">
             <p class="text-sm font-bold text-gray-800">
               크롤링 키워드 설정
               <span class="ml-1.5 text-xs font-normal text-gray-400">(최대 {{ MAX_KWS }}개)</span>
             </p>
             <button @click="resetKeywords"
-              class="text-xs text-gray-400 hover:text-blue-600 transition-colors font-medium">
-              기본값 복원
-            </button>
+              class="text-xs text-gray-400 hover:text-blue-600 transition-colors font-medium">기본값 복원</button>
           </div>
-          <!-- 현재 키워드 뱃지 -->
           <div class="flex flex-wrap gap-2">
-            <span v-for="kw in userKeywords" :key="kw"
+            <span
+              v-for="kw in userKeywords" :key="kw"
               class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold border"
-              :class="keywordColor(kw)">
+              :class="keywordColor(kw)"
+            >
               {{ kw }}
-              <button @click="removeKeyword(kw)"
-                class="hover:opacity-70 transition-opacity ml-0.5">
+              <button @click="removeKeyword(kw)" class="hover:opacity-70 transition-opacity ml-0.5">
                 <X class="w-3 h-3" />
               </button>
             </span>
             <span v-if="userKeywords.length === 0" class="text-xs text-gray-400">키워드 없음</span>
           </div>
-          <!-- 추가 입력 -->
           <div v-if="userKeywords.length < MAX_KWS" class="flex gap-2">
             <input
               v-model="kwInput"
               @keydown.enter="addKeyword"
-              placeholder="새 키워드 입력 후 Enter (예: 보안, 피싱, AI)"
+              placeholder="새 키워드 입력 후 Enter"
               class="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             />
-            <button @click="addKeyword"
+            <button
+              @click="addKeyword"
               :disabled="!kwInput.trim() || userKeywords.length >= MAX_KWS"
-              class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-bold rounded-xl transition-all">
-              추가
-            </button>
+              class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-bold rounded-xl transition-all"
+            >추가</button>
           </div>
           <p v-else class="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-            키워드가 최대 {{ MAX_KWS }}개입니다. 기존 키워드를 삭제 후 추가하세요.
-          </p>
-          <p class="text-xs text-gray-400">
-            키워드는 브라우저에 저장됩니다. 크롤링 버튼 클릭 시 설정된 키워드로 뉴스를 수집합니다.
+            최대 {{ MAX_KWS }}개입니다. 기존 키워드를 삭제 후 추가하세요.
           </p>
         </div>
 
         <!-- 로딩 -->
-        <div v-if="loading" class="flex justify-center py-20">
-          <Loader2 class="w-8 h-8 animate-spin text-blue-500" />
+        <div v-if="loading" class="space-y-6">
+          <!-- Top 3 스켈레톤 -->
+          <div>
+            <div class="h-5 w-36 bg-gray-200 rounded-lg animate-pulse mb-4"></div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div v-for="i in 3" :key="i" class="h-52 bg-gray-100 rounded-2xl animate-pulse"></div>
+            </div>
+          </div>
+          <!-- 섹션 스켈레톤 -->
+          <div v-for="i in 2" :key="i">
+            <div class="h-4 w-32 bg-gray-200 rounded-lg animate-pulse mb-4"></div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div v-for="j in 6" :key="j" class="h-28 bg-gray-100 rounded-2xl animate-pulse"></div>
+            </div>
+          </div>
         </div>
 
         <!-- 빈 상태 -->
-        <div v-else-if="filtered.length === 0" class="text-center py-20 text-gray-400">
+        <div v-else-if="newsList.length === 0" class="text-center py-20 text-gray-400">
           <Newspaper class="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p class="text-sm">
-            {{ newsList.length === 0
-              ? '저장된 뉴스가 없습니다. 상단 "뉴스 크롤링" 버튼을 눌러 뉴스를 가져오세요.'
-              : '검색 결과가 없습니다.' }}
-          </p>
+          <p class="text-sm">저장된 뉴스가 없습니다. 상단 "뉴스 크롤링" 버튼을 눌러 뉴스를 가져오세요.</p>
         </div>
 
-        <!-- 뉴스 카드 -->
-        <div v-else class="space-y-3">
-          <div
-            v-for="news in filtered" :key="news.id"
-            class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow"
-          >
-            <div class="flex items-start gap-4 p-5 cursor-pointer" @click="toggleExpand(news.id)">
-              <span class="flex-shrink-0 text-xs font-bold px-2.5 py-1 rounded-full border"
-                :class="keywordColor(news.keyword)"
-              >{{ news.keyword }}</span>
-              <div class="flex-1 min-w-0">
-                <h2 class="text-base font-bold text-gray-900 leading-snug line-clamp-2 mb-1">{{ news.title }}</h2>
-                <p class="text-xs text-gray-400">{{ fmtDate(news.published_date) }}</p>
-              </div>
-              <div class="flex-shrink-0 flex items-center gap-2">
-                <a :href="news.url" target="_blank" rel="noopener noreferrer" @click.stop
-                  class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                ><ExternalLink class="w-4 h-4" /></a>
-                <ChevronUp   v-if="expandedId === news.id" class="w-4 h-4 text-gray-400" />
-                <ChevronDown v-else                        class="w-4 h-4 text-gray-400" />
-              </div>
-            </div>
-            <div v-if="expandedId === news.id" class="px-5 pb-5 border-t border-gray-100">
+        <template v-else>
 
-              <!-- AI 요약 영역 -->
-              <div class="mt-4">
-                <!-- 요약 없을 때: 버튼 -->
-                <button v-if="!news.summary && !summaryState[news.id]?.loading"
-                  @click.stop="requestSummary(news)"
-                  class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-indigo-500 text-white hover:from-violet-700 hover:to-indigo-600 transition-all shadow-sm"
-                >
-                  <Sparkles class="w-4 h-4" />AI 요약 생성
-                </button>
-
-                <!-- 로딩 -->
-                <div v-if="summaryState[news.id]?.loading"
-                  class="flex items-center gap-2 text-sm text-indigo-600"
-                >
-                  <Loader2 class="w-4 h-4 animate-spin" />요약 생성 중...
-                </div>
-
-                <!-- 요약 오류 -->
-                <p v-if="summaryState[news.id]?.error"
-                  class="text-xs text-red-500 mt-1"
-                >{{ summaryState[news.id].error }}</p>
-
-                <!-- 요약 결과 -->
-                <div v-if="news.summary"
-                  class="bg-indigo-50 border border-indigo-200 rounded-xl p-4"
-                >
-                  <p class="text-xs font-bold text-indigo-600 mb-2 flex items-center gap-1">
-                    <Sparkles class="w-3.5 h-3.5" />AI 요약
-                  </p>
-                  <p class="text-sm text-gray-700 leading-relaxed">{{ news.summary }}</p>
-                </div>
-              </div>
-
-              <!-- 본문 -->
-              <div class="mt-4">
-                <p class="text-xs font-semibold text-gray-400 mb-2 flex items-center gap-1">
-                  <BookOpen class="w-3.5 h-3.5" />본문
-                </p>
-                <p class="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap max-h-72 overflow-y-auto">
-                  {{ news.content || '본문 내용이 없습니다.' }}
-                </p>
-              </div>
-
-              <div class="mt-4 flex justify-end">
-                <a :href="news.url" target="_blank" rel="noopener noreferrer"
-                  class="flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-800 transition-colors"
-                ><ExternalLink class="w-4 h-4" />원문 기사 읽기</a>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <p v-if="!loading && filtered.length > 0" class="text-center text-xs text-gray-400 mt-6">
-          총 {{ filtered.length }}건 {{ searchQ ? `(검색: "${searchQ}")` : '' }}
-        </p>
-      </template>
-
-      <!-- ═══════════════════════════════════════════════════════════════════ -->
-      <!--  군집 분석 탭                                                       -->
-      <!-- ═══════════════════════════════════════════════════════════════════ -->
-      <template v-else>
-
-        <!-- 컨트롤 패널 -->
-        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-5 mb-6">
-          <div class="flex flex-wrap items-end gap-4">
-            <!-- 키워드 필터 -->
-            <div>
-              <label class="block text-xs font-semibold text-gray-500 mb-1.5">대상 키워드</label>
-              <div class="flex gap-1">
-                <button
-                  v-for="tab in keywordTabs" :key="tab.key"
-                  @click="clusterKeyword = tab.key"
-                  class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all border"
-                  :class="clusterKeyword === tab.key
-                    ? 'bg-blue-700 text-white border-blue-700'
-                    : 'text-gray-600 border-gray-200 hover:bg-gray-50'"
-                >{{ tab.label || '전체' }}</button>
-              </div>
-            </div>
-
-            <!-- eps -->
-            <div>
-              <label class="block text-xs font-semibold text-gray-500 mb-1.5">
-                eps (반경) &nbsp;<span class="text-blue-600 font-bold">{{ clusterEps }}</span>
-              </label>
-              <input type="range" v-model.number="clusterEps" min="0.1" max="0.9" step="0.05"
-                class="w-32 accent-blue-600"
-              />
-            </div>
-
-            <!-- min_samples -->
-            <div>
-              <label class="block text-xs font-semibold text-gray-500 mb-1.5">
-                min_samples &nbsp;<span class="text-blue-600 font-bold">{{ clusterMinSamp }}</span>
-              </label>
-              <input type="range" v-model.number="clusterMinSamp" min="2" max="10" step="1"
-                class="w-32 accent-blue-600"
-              />
-            </div>
-
-            <!-- 실행 버튼 -->
-            <button
-              @click="runCluster"
-              :disabled="clusterLoading"
-              class="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm ml-auto"
-              :class="clusterLoading
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                : 'bg-gradient-to-r from-indigo-700 to-blue-600 text-white hover:from-indigo-800 hover:to-blue-700'"
-            >
-              <Loader2 v-if="clusterLoading" class="w-4 h-4 animate-spin" />
-              <Layers  v-else                class="w-4 h-4" />
-              {{ clusterLoading ? '분석 중...' : '군집 분석 실행' }}
-            </button>
-          </div>
-
-          <p class="text-xs text-gray-400 mt-3">
-            TF-IDF (음절 n-gram) + DBSCAN(cosine) + TruncatedSVD 2D 시각화.
-            eps가 작을수록 더 세밀하게 분리됩니다.
-          </p>
-        </div>
-
-        <!-- 오류 -->
-        <div v-if="clusterError"
-          class="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl mb-5 text-red-700 text-sm"
-        >
-          <AlertTriangle class="w-5 h-5 flex-shrink-0" />{{ clusterError }}
-        </div>
-
-        <!-- 로딩 -->
-        <div v-if="clusterLoading" class="flex flex-col items-center justify-center py-24 gap-3">
-          <Loader2 class="w-9 h-9 animate-spin text-indigo-500" />
-          <p class="text-sm text-gray-500">군집 분석 중입니다...</p>
-        </div>
-
-        <!-- 결과 없음 -->
-        <div v-else-if="!clusterResult && !clusterError" class="text-center py-24 text-gray-400">
-          <Layers class="w-12 h-12 mx-auto mb-3 opacity-25" />
-          <p class="text-sm">군집 분석 실행 버튼을 눌러 시작하세요.</p>
-          <p class="text-xs mt-1">뉴스를 먼저 크롤링해야 합니다.</p>
-        </div>
-
-        <!-- 분석 결과 -->
-        <template v-else-if="clusterResult">
-
-          <!-- 요약 통계 -->
-          <div class="grid grid-cols-3 gap-4 mb-6">
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
-              <p class="text-2xl font-black text-gray-900">{{ clusterResult.total }}</p>
-              <p class="text-xs text-gray-500 mt-0.5">분석 기사</p>
-            </div>
-            <div class="bg-white rounded-2xl border border-indigo-100 shadow-sm p-4 text-center">
-              <p class="text-2xl font-black text-indigo-700">{{ clusterResult.n_clusters }}</p>
-              <p class="text-xs text-gray-500 mt-0.5">발견된 군집</p>
-            </div>
-            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
-              <p class="text-2xl font-black text-slate-500">{{ clusterResult.noise_count }}</p>
-              <p class="text-xs text-gray-500 mt-0.5">노이즈 (미분류)</p>
-            </div>
-          </div>
-
-          <!-- Scatter 차트 -->
-          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
-            <h2 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-              <CircleDot class="w-4 h-4 text-indigo-500" />
-              군집 분포 시각화 &nbsp;
-              <span class="text-xs font-normal text-gray-400">(각 점 = 기사 1건, 색상 = 군집)</span>
+          <!-- ── TOP 3 ──────────────────────────────────────────────────── -->
+          <section class="mb-10">
+            <h2 class="flex items-center gap-2 text-base font-black text-gray-900 mb-4">
+              <Crown class="w-5 h-5 text-amber-500" />주목 뉴스 Top 3
             </h2>
-            <div class="h-80">
-              <Scatter :data="scatterData" :options="scatterOptions" />
-            </div>
-          </div>
 
-          <!-- Top-3 군집 카드 -->
-          <div v-if="clusterResult.clusters.length" class="mb-4">
-            <h2 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-              <TrendingUp class="w-4 h-4 text-blue-500" />
-              가장 많이 등장한 뉴스 주제 Top {{ clusterResult.clusters.length }}
-            </h2>
-            <div class="grid gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div
-                v-for="(cl, idx) in clusterResult.clusters" :key="cl.id"
-                class="bg-gradient-to-r border rounded-2xl shadow-sm overflow-hidden"
-                :class="RANK_STYLES[idx]"
+                v-for="(news, idx) in topNews" :key="news.id"
+                class="rounded-2xl border shadow-sm overflow-hidden flex flex-col"
+                :class="TOP_STYLES[idx].outer"
               >
-                <!-- 군집 헤더 -->
-                <div class="flex items-center gap-3 px-5 py-3 border-b border-white/60">
-                  <span class="text-xs font-black px-2.5 py-1 rounded-full"
-                    :class="RANK_BADGE[idx]"
-                  >{{ RANK_LABELS[idx] }}</span>
-                  <span class="text-sm font-bold text-gray-800">군집 {{ cl.id }}</span>
-                  <span class="ml-auto text-xs text-gray-500">기사 {{ cl.size }}건</span>
-                  <span class="w-3 h-3 rounded-full flex-shrink-0" :style="{ background: cl.color }"></span>
+                <!-- 카드 상단 -->
+                <div class="flex items-center gap-2 px-4 pt-4 pb-2">
+                  <span class="text-xs font-black px-2.5 py-1 rounded-full" :class="TOP_STYLES[idx].badge">
+                    {{ TOP_RANKS[idx] }}
+                  </span>
+                  <span class="text-xs font-bold px-2 py-0.5 rounded-full border" :class="keywordColor(news.keyword)">
+                    {{ news.keyword }}
+                  </span>
+                  <a
+                    :href="news.url" target="_blank" rel="noopener noreferrer"
+                    @click.stop
+                    class="ml-auto p-1 text-gray-300 hover:text-blue-500 transition-colors"
+                  >
+                    <ExternalLink class="w-3.5 h-3.5" />
+                  </a>
                 </div>
 
-                <!-- 대표 기사 목록 -->
-                <ul class="divide-y divide-white/50">
-                  <li
-                    v-for="article in cl.articles" :key="article.id"
-                    class="flex items-start gap-3 px-5 py-3 hover:bg-white/40 transition-colors"
-                  >
-                    <span class="flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded-full border mt-0.5"
-                      :class="keywordColor(article.keyword)"
-                    >{{ article.keyword }}</span>
-                    <div class="flex-1 min-w-0">
-                      <a :href="article.url" target="_blank" rel="noopener noreferrer"
-                        class="text-sm font-medium text-gray-800 hover:text-blue-700 leading-snug line-clamp-2 transition-colors"
-                      >{{ article.title }}</a>
-                      <p class="text-xs text-gray-400 mt-0.5">{{ fmtDate(article.published_date) }}</p>
+                <!-- 제목 / 날짜 -->
+                <div class="px-4 pb-3 flex-1 cursor-pointer" @click="toggleExpandTop(news.id)">
+                  <h3 class="text-sm font-bold text-gray-900 leading-snug line-clamp-3 mb-2">{{ news.title }}</h3>
+                  <p class="text-xs text-gray-400">{{ fmtDate(news.published_date) }}</p>
+                </div>
+
+                <!-- 확장 영역 (AI 요약 + 본문) -->
+                <div
+                  v-if="expandedTopId === news.id"
+                  class="px-4 pb-4 border-t space-y-3"
+                  :class="TOP_STYLES[idx].sep"
+                >
+                  <!-- AI 요약 -->
+                  <div class="pt-3">
+                    <button
+                      v-if="!news.summary && !summaryState[news.id]?.loading"
+                      @click.stop="requestSummary(news)"
+                      class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-violet-600 text-white hover:bg-violet-700 transition-colors"
+                    >
+                      <Sparkles class="w-3.5 h-3.5" />AI 요약 생성
+                    </button>
+                    <div v-if="summaryState[news.id]?.loading" class="flex items-center gap-2 text-xs text-indigo-600">
+                      <Loader2 class="w-3.5 h-3.5 animate-spin" />요약 생성 중...
                     </div>
-                    <a :href="article.url" target="_blank" rel="noopener noreferrer"
-                      class="flex-shrink-0 p-1 text-gray-400 hover:text-blue-600 transition-colors mt-0.5"
-                    ><ExternalLink class="w-3.5 h-3.5" /></a>
-                  </li>
-                </ul>
+                    <p v-if="summaryState[news.id]?.error" class="text-xs text-red-500">
+                      {{ summaryState[news.id].error }}
+                    </p>
+                    <div v-if="news.summary" class="bg-indigo-50 border border-indigo-200 rounded-xl p-3">
+                      <p class="text-xs font-bold text-indigo-600 mb-1.5 flex items-center gap-1">
+                        <Sparkles class="w-3 h-3" />AI 요약
+                      </p>
+                      <p class="text-xs text-gray-700 leading-relaxed">{{ news.summary }}</p>
+                    </div>
+                  </div>
+
+                  <!-- 본문 미리보기 -->
+                  <div>
+                    <p class="text-xs font-semibold text-gray-400 mb-1 flex items-center gap-1">
+                      <BookOpen class="w-3 h-3" />본문
+                    </p>
+                    <p class="text-xs text-gray-600 leading-relaxed line-clamp-5">
+                      {{ news.content || '본문 없음' }}
+                    </p>
+                  </div>
+                </div>
+
+                <!-- 접기/펼치기 버튼 -->
+                <button
+                  @click="toggleExpandTop(news.id)"
+                  class="flex items-center justify-center gap-1 text-xs text-gray-400 hover:text-gray-700 py-2.5 border-t transition-colors"
+                  :class="TOP_STYLES[idx].sep"
+                >
+                  <ChevronUp   v-if="expandedTopId === news.id" class="w-3.5 h-3.5" />
+                  <ChevronDown v-else                            class="w-3.5 h-3.5" />
+                  {{ expandedTopId === news.id ? '접기' : '자세히 보기' }}
+                </button>
               </div>
+            </div>
+          </section>
+
+          <!-- ── 주제별 섹션 ──────────────────────────────────────────── -->
+          <div>
+            <!-- 키워드 선택 버튼 -->
+            <div class="flex items-center gap-2 mb-5 flex-wrap">
+              <button
+                v-for="kw in userKeywords" :key="kw"
+                @click="activeSection = kw"
+                class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold border transition-all"
+                :class="activeSection === kw
+                  ? [sectionColor(kw).bg, 'text-white border-transparent shadow-sm']
+                  : ['bg-white border-gray-200', sectionColor(kw).text, 'hover:border-current']"
+              >
+                {{ kw }}
+                <span class="text-xs font-semibold opacity-70 bg-white/20 px-1.5 py-0.5 rounded-full">
+                  {{ byKeyword[kw]?.length ?? 0 }}
+                </span>
+              </button>
+            </div>
+
+            <!-- 선택된 키워드 기사 -->
+            <section v-if="activeSection && byKeyword[activeSection]?.length > 0">
+              <!-- 섹션 헤더 -->
+              <div class="flex items-center gap-3 mb-4">
+                <div class="w-1 h-6 rounded-full flex-shrink-0" :class="sectionColor(activeSection).bg"></div>
+                <h2 class="text-base font-black text-gray-900">{{ activeSection }} 관련 뉴스</h2>
+                <span class="ml-auto text-xs font-semibold text-gray-400">
+                  {{ byKeyword[activeSection].length }}건 · {{ getPage(activeSection) }}/{{ totalPages(activeSection) }} 페이지
+                </span>
+              </div>
+
+              <!-- 기사 그리드 -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div
+                  v-for="news in pagedItems(activeSection)" :key="news.id"
+                  @click="openModal(news)"
+                  class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-md hover:border-blue-200 transition-all group flex flex-col gap-2 cursor-pointer"
+                >
+                  <div class="flex items-start justify-between gap-2">
+                    <span class="text-xs font-bold px-2 py-0.5 rounded-full border flex-shrink-0"
+                      :class="keywordColor(news.keyword)">{{ news.keyword }}</span>
+                    <a :href="news.url" target="_blank" rel="noopener noreferrer" @click.stop
+                      class="p-0.5 text-gray-200 hover:text-blue-500 transition-colors flex-shrink-0">
+                      <ExternalLink class="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                  <h3 class="text-sm font-semibold text-gray-900 leading-snug line-clamp-2 flex-1">{{ news.title }}</h3>
+                  <p class="text-xs text-gray-400">{{ fmtDate(news.published_date) }}</p>
+                </div>
+              </div>
+
+              <!-- 페이지네이션 -->
+              <div v-if="totalPages(activeSection) > 1" class="flex items-center justify-center gap-2 mt-5">
+                <button
+                  @click="prevPage(activeSection)"
+                  :disabled="getPage(activeSection) <= 1"
+                  class="w-8 h-8 flex items-center justify-center rounded-xl border bg-white text-gray-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                >
+                  <ChevronLeft class="w-4 h-4" />
+                </button>
+                <div class="flex gap-1">
+                  <button
+                    v-for="p in totalPages(activeSection)" :key="p"
+                    @click="kwPages[activeSection] = p"
+                    class="w-8 h-8 flex items-center justify-center rounded-xl text-sm font-bold transition-all"
+                    :class="getPage(activeSection) === p
+                      ? [sectionColor(activeSection).bg, 'text-white shadow-sm']
+                      : 'border bg-white text-gray-500 hover:bg-blue-50 hover:border-blue-200'"
+                  >{{ p }}</button>
+                </div>
+                <button
+                  @click="nextPage(activeSection)"
+                  :disabled="getPage(activeSection) >= totalPages(activeSection)"
+                  class="w-8 h-8 flex items-center justify-center rounded-xl border bg-white text-gray-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                >
+                  <ChevronRight class="w-4 h-4" />
+                </button>
+              </div>
+            </section>
+
+            <!-- 빈 상태 -->
+            <div v-else class="text-center py-12 text-gray-400">
+              <Newspaper class="w-10 h-10 mx-auto mb-2 opacity-20" />
+              <p class="text-sm">{{ activeSection }} 관련 뉴스가 없습니다.</p>
             </div>
           </div>
 
         </template>
-      </template>
 
     </main>
     <AppFooter />
   </div>
+
+  <!-- ── 기사 상세 모달 ───────────────────────────────────────────────── -->
+  <Teleport to="body">
+    <Transition
+      enter-active-class="transition duration-200 ease-out"
+      enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="selectedNews"
+        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+        @click.self="closeModal"
+      >
+        <!-- 배경 블러 -->
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeModal"></div>
+
+        <!-- 모달 본체 -->
+        <div class="relative bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl max-h-[85vh] flex flex-col overflow-hidden">
+
+          <!-- 헤더 -->
+          <div class="flex items-start gap-3 px-5 py-4 border-b border-gray-100 flex-shrink-0">
+            <span
+              class="text-xs font-bold px-2.5 py-1 rounded-full border flex-shrink-0 mt-0.5"
+              :class="keywordColor(selectedNews.keyword)"
+            >{{ selectedNews.keyword }}</span>
+            <h2 class="flex-1 text-sm font-bold text-gray-900 leading-snug">{{ selectedNews.title }}</h2>
+            <button
+              @click="closeModal"
+              class="flex-shrink-0 p-1 ml-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X class="w-5 h-5" />
+            </button>
+          </div>
+
+          <!-- AI 요약 -->
+          <div class="px-5 py-4 border-b border-gray-100 flex-shrink-0 bg-slate-50/60">
+            <button
+              v-if="!selectedNews.summary && !summaryState[selectedNews.id]?.loading"
+              @click="requestSummary(selectedNews)"
+              class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold bg-gradient-to-r from-violet-600 to-indigo-500 text-white hover:from-violet-700 hover:to-indigo-600 transition-all shadow-sm"
+            >
+              <Sparkles class="w-4 h-4" />AI 요약 생성
+            </button>
+            <div v-if="summaryState[selectedNews.id]?.loading" class="flex items-center gap-2 text-sm text-indigo-600">
+              <Loader2 class="w-4 h-4 animate-spin" />요약 생성 중...
+            </div>
+            <p v-if="summaryState[selectedNews.id]?.error" class="text-xs text-red-500 mt-1">
+              {{ summaryState[selectedNews.id].error }}
+            </p>
+            <div v-if="selectedNews.summary" class="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+              <p class="text-xs font-bold text-indigo-600 mb-2 flex items-center gap-1">
+                <Sparkles class="w-3.5 h-3.5" />AI 요약
+              </p>
+              <p class="text-sm text-gray-700 leading-relaxed">{{ selectedNews.summary }}</p>
+            </div>
+          </div>
+
+          <!-- 본문 스크롤 영역 -->
+          <div class="flex-1 overflow-y-auto px-5 py-4">
+            <p class="text-xs font-semibold text-gray-400 mb-2 flex items-center gap-1">
+              <BookOpen class="w-3.5 h-3.5" />본문
+            </p>
+            <p class="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
+              {{ selectedNews.content || '본문 내용이 없습니다.' }}
+            </p>
+          </div>
+
+          <!-- 푸터 -->
+          <div class="flex items-center justify-between px-5 py-4 border-t border-gray-100 flex-shrink-0">
+            <p class="text-xs text-gray-400">{{ fmtDate(selectedNews.published_date) }}</p>
+            <a
+              :href="selectedNews.url" target="_blank" rel="noopener noreferrer"
+              class="flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors"
+            >
+              <ExternalLink class="w-4 h-4" />원문 기사 읽기
+            </a>
+          </div>
+
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>

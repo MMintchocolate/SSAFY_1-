@@ -24,6 +24,11 @@ const router = createRouter({
       component: () => import('@/views/RegisterView.vue'),
       meta: { layout: 'blank' },
     },
+    {
+      path: '/reset-password',
+      component: () => import('@/views/ResetPasswordView.vue'),
+      meta: { layout: 'blank' },
+    },
 
     // ── App layout (NavBar 포함, AppLayout 이 RouterView 를 감쌈) ───
     {
@@ -37,9 +42,10 @@ const router = createRouter({
         { path: 'branches',     component: () => import('@/views/BranchesView.vue') },
         { path: 'stocks',       component: () => import('@/views/StocksView.vue') },
         { path: 'gold',         component: () => import('@/views/GoldView.vue') },
-        { path: 'dataset',      component: () => import('@/views/DatasetView.vue') },
+        { path: 'dataset',      component: () => import('@/views/DatasetView.vue'),      meta: { requiresAuth: true } },
         { path: 'news',         component: () => import('@/views/NewsView.vue') },
         { path: 'community',    component: () => import('@/views/CommunityView.vue') },
+        { path: 'chatbot',      component: () => import('@/views/ChatbotView.vue') },
         // ── 인증 필요 ──────────────────────────────────────────────
         { path: 'receipts',     component: () => import('@/views/ReceiptsView.vue'),      meta: { requiresAuth: true } },
         { path: 'voicephishing',component: () => import('@/views/VoicePhishingView.vue'), meta: { requiresAuth: true } },
@@ -64,6 +70,7 @@ const router = createRouter({
     { path: '/indicators',    redirect: '/app/indicators' },
     { path: '/news',          redirect: '/app/news' },
     { path: '/community',     redirect: '/app/community' },
+    { path: '/chatbot',       redirect: '/app/chatbot' },
     { path: '/mypage',        redirect: '/app/mypage' },
   ],
 
@@ -72,7 +79,9 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const token = localStorage.getItem('access')
-  if (to.meta.requiresAuth && !token) return '/login'
+  if (to.meta.requiresAuth && !token) {
+    return { path: '/app/home', query: { loginRequired: '1' } }
+  }
 })
 
 export default router

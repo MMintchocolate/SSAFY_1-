@@ -3,7 +3,7 @@
 import { ref, onMounted } from 'vue'
 import NavBar from '@/components/NavBar.vue'
 import AppFooter from '@/components/AppFooter.vue'
-import { Star, TrendingUp, TrendingDown, Activity, BarChart2, AlertCircle, RefreshCw, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Newspaper, ExternalLink, Play } from '@lucide/vue'
+import { Star, TrendingUp, TrendingDown, Activity, BarChart2, AlertCircle, RefreshCw, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Newspaper, ExternalLink, Play, BrainCircuit, Loader2 } from '@lucide/vue'
 import { useAuth } from '@/composables/useAuth'
 
 const { authFetch } = useAuth()
@@ -23,6 +23,56 @@ const newsError        = ref('')
 // 종목 유튜브 데이터
 const stock_youtube_data = ref([])
 const youtubeIndex       = ref(0)
+
+// AI 기술적 분석
+const aiText    = ref('')
+const aiLoading = ref(false)
+const aiError   = ref('')
+
+async function generateAiAnalysis() {
+  if (!selected.value) return
+  aiLoading.value = true
+  aiError.value   = ''
+  aiText.value    = ''
+  try {
+    const res  = await authFetch(`${API}/${selected.value.symbol}/ai-analysis/`)
+    const data = await res.json()
+    if (!res.ok || data.error) throw new Error(data.error || 'AI 분석 실패')
+    aiText.value = data.analysis
+  } catch (e) {
+    aiError.value = e.message
+  } finally {
+    aiLoading.value = false
+  }
+}
+
+// ML 예측 근거
+const mlResult   = ref(null)   // { signal, signal_label, probabilities, explanation }
+const mlLoading  = ref(false)
+const mlError    = ref('')
+
+async function generateMlExplain() {
+  if (!selected.value) return
+  mlLoading.value = true
+  mlError.value   = ''
+  mlResult.value  = null
+  try {
+    const res  = await authFetch(`${API}/ml/explain/?symbol=${selected.value.symbol}`)
+    const data = await res.json()
+    if (!res.ok || data.error) throw new Error(data.error || 'ML 분석 실패')
+    mlResult.value = data
+  } catch (e) {
+    mlError.value = e.message
+  } finally {
+    mlLoading.value = false
+  }
+}
+
+// 종목 변경 시 분석 초기화
+function resetAi() {
+  aiText.value  = ''; aiError.value  = ''
+  mlResult.value = null; mlError.value = ''
+}
 
 // 각 지표 설명 토글
 const infoOpen = ref({ ma: false, rsi: false, macd: false, bollinger: false })
@@ -85,6 +135,7 @@ async function selectStock(item) {
   newsError.value  = ''
   stock_youtube_data.value = []
   youtubeIndex.value       = 0
+  resetAi()
   try {
     const res  = await authFetch(`${API}/${item.symbol}/indicators/`)
     const data = await res.json()
@@ -495,6 +546,66 @@ onMounted(loadWatchlist)
               </div>
 
             </div><!-- /grid -->
+
+            <!-- ── AI 지표 분석 ── -->
+            <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+              <div class="flex items-center gap-2 mb-4">
+                <BrainCircuit class="w-4 h-4 text-violet-500" />
+                <h3 class="font-bold text-gray-900 text-sm">AI 지표 분석</h3>
+                <span class="text-xs text-gray-400 ml-1">{{ selected.name }}</span>
+                <button
+                  @click="generateAiAnalysis"
+                  :disabled="aiLoading"
+                  class="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-colors"
+                >
+                  <Loader2 v-if="aiLoading" class="w-3.5 h-3.5 animate-spin" />
+                  <BrainCircuit v-else class="w-3.5 h-3.5" />
+                  {{ aiLoading ? '분석 중...' : (aiText ? '재분석' : 'AI 분석 시작') }}
+                </button>
+              </div>
+
+              <!-- 초기 상태 -->
+              <div v-if="!aiText && !aiLoading && !aiError" class="py-8 text-center text-sm text-gray-400">
+                <BrainCircuit class="w-8 h-8 mx-auto mb-2 opacity-20" />
+                버튼을 누르면 4가지 지표를 종합한 AI 분석을 생성합니다.
+              </div>
+
+              <!-- 에러 -->
+              <p v-if="aiError" class="text-xs text-red-500 py-3 text-center">{{ aiError }}</p>
+
+              <!-- 로딩 스켈레톤 -->
+              <div v-if="aiLoading" class="space-y-3 animate-pulse">
+                <div v-for="i in 4" :key="i" class="h-4 bg-gray-100 rounded" :style="{ width: (85 - i * 8) + '%' }" />
+              </div>
+
+              <!-- 결과 -->
+              <div v-if="aiText && !aiLoading" class="space-y-4">
+                <div
+                  v-for="(section, i) in aiText.split(/\n## /).filter(Boolean).map(s => {
+                    const nl = s.indexOf('\n')
+                    return { title: s.slice(0, nl).replace(/^## /, '').trim(), body: s.slice(nl + 1).trim() }
+                  })"
+                  :key="i"
+                  class="p-4 rounded-xl border"
+                  :class="[
+                    i === 0 ? 'bg-violet-50 border-violet-100' :
+                    i === 1 ? 'bg-emerald-50 border-emerald-100' :
+                    i === 2 ? 'bg-amber-50 border-amber-100' :
+                              'bg-gray-50 border-gray-100'
+                  ]"
+                >
+                  <p class="text-xs font-bold mb-1.5"
+                    :class="[
+                      i === 0 ? 'text-violet-700' :
+                      i === 1 ? 'text-emerald-700' :
+                      i === 2 ? 'text-amber-700' :
+                                'text-gray-600'
+                    ]"
+                  >{{ section.title }}</p>
+                  <p class="text-xs leading-relaxed text-gray-700 whitespace-pre-line">{{ section.body }}</p>
+                </div>
+              </div>
+            </div>
 
             <!-- ── 관련 뉴스 ── -->
             <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">

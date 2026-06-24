@@ -1,66 +1,186 @@
 <script setup>
+// @ts-nocheck
 import { ref, onMounted, onUnmounted } from 'vue'
 import NavBar from '@/components/NavBar.vue'
 import AppFooter from '@/components/AppFooter.vue'
-import { MapPin, Crosshair, Search, Loader } from '@lucide/vue'
+import { MapPin, Crosshair, Search, Loader2, Building2, Navigation, Phone, Route } from '@lucide/vue'
 
-const NCP_CLIENT_ID = import.meta.env.VITE_NCP_MAP_CLIENT_ID
+const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_MAP_JS_KEY
 
-// ── 상태 ──────────────────────────────────────────────────
-const mapEl          = ref(null)
-const currentAddress = ref('')
-const userPos        = ref(null)   // { lat, lng }
-const branches       = ref([])
-const searchQuery    = ref('은행')
-const loadingLoc     = ref(false)
-const loadingSearch  = ref(false)
-const errorMsg       = ref('')
+// ── 검색 모드 ─────────────────────────────────────────────────────────────
+const mode = ref('region')
 
-let naverMap   = null
-let userMarker = null
-const branchMarkers = []
+// ── 공용 상태 ──────────────────────────────────────────────────────────────
+const mapEl     = ref(null)
+const branches  = ref([])
+const errorMsg  = ref('')
+const searching = ref(false)
 
-// ── 네이버 지도 SDK 동적 로드 ──────────────────────────────
-function loadNaverMapScript() {
+// ── 기능 1: 지역명 검색 ────────────────────────────────────────────────────
+const regionInput = ref('')
+const bankInput   = ref('은행')
+
+// ── 기능 2: 내 위치 ────────────────────────────────────────────────────────
+const locating    = ref(false)
+const currentArea = ref('')
+const userPos     = ref(null)
+const nearbyKw    = ref('은행')
+
+// ── 카카오맵 인스턴스 ───────────────────────────────────────────────────────
+let kakaoMap         = null
+let userOverlay      = null
+const branchMarkers  = []
+const infoWindows    = []
+
+// ══════════════════════════════════════════════════════════════════════════
+// 카카오맵 SDK 초기화
+// ══════════════════════════════════════════════════════════════════════════
+
+function loadKakaoMapScript() {
   return new Promise((resolve, reject) => {
-    if (window.naver?.maps) { resolve(); return }
-    const script = document.createElement('script')
-    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${NCP_CLIENT_ID}`
-    script.onload  = resolve
-    script.onerror = reject
-    document.head.appendChild(script)
+    if (window.kakao?.maps) { window.kakao.maps.load(resolve); return }
+    const s = document.createElement('script')
+    s.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_JS_KEY}&autoload=false`
+    s.onload  = () => window.kakao.maps.load(resolve)
+    s.onerror = reject
+    document.head.appendChild(s)
   })
 }
 
-// ── 지도 초기화 ───────────────────────────────────────────
-function initMap(lat, lng) {
-  const center = new window.naver.maps.LatLng(lat, lng)
-  naverMap = new window.naver.maps.Map(mapEl.value, {
-    center,
-    zoom: 15,
-    zoomControl: true,
-    zoomControlOptions: { position: window.naver.maps.Position.TOP_RIGHT },
-  })
-  setUserMarker(lat, lng)
+function initMap(lat = 37.5665, lng = 126.9780, level = 7) {
+  const center = new window.kakao.maps.LatLng(lat, lng)
+  if (!kakaoMap) {
+    kakaoMap = new window.kakao.maps.Map(mapEl.value, { center, level })
+  } else {
+    kakaoMap.setCenter(center)
+    kakaoMap.setLevel(level)
+  }
 }
 
-function setUserMarker(lat, lng) {
-  if (userMarker) userMarker.setMap(null)
-  userMarker = new window.naver.maps.Marker({
-    position: new window.naver.maps.LatLng(lat, lng),
-    map: naverMap,
-    icon: {
-      content: `<div style="width:16px;height:16px;border-radius:50%;background:#2563eb;border:3px solid white;box-shadow:0 0 0 3px rgba(37,99,235,0.3)"></div>`,
-      anchor: new window.naver.maps.Point(8, 8),
-    },
+// ══════════════════════════════════════════════════════════════════════════
+// 마커 관리
+// ══════════════════════════════════════════════════════════════════════════
+
+function setUserOverlay(lat, lng) {
+  if (userOverlay) userOverlay.setMap(null)
+  const dot = '<div style="width:18px;height:18px;border-radius:50%;margin:-9px 0 0 -9px;background:#2563eb;border:3px solid white;box-shadow:0 0 0 5px rgba(37,99,235,0.25)"></div>'
+  userOverlay = new window.kakao.maps.CustomOverlay({
+    position: new window.kakao.maps.LatLng(lat, lng),
+    content: dot,
+    map: kakaoMap,
+    zIndex: 10,
   })
-  naverMap.setCenter(new window.naver.maps.LatLng(lat, lng))
 }
 
-// ── 현재 위치 가져오기 ─────────────────────────────────────
-async function locateMe() {
-  loadingLoc.value = true
-  errorMsg.value   = ''
+function addBranchMarker(branch, index) {
+  if (!kakaoMap) return
+
+  const pos    = new window.kakao.maps.LatLng(branch.lat, branch.lng)
+  const color  = mode.value === 'region' ? '#1d4ed8' : '#059669'
+
+  const labelOverlay = new window.kakao.maps.CustomOverlay({
+    position: pos,
+    content: `<div style="
+      background:${color};color:white;font-size:11px;font-weight:700;
+      padding:3px 8px;border-radius:12px;white-space:nowrap;cursor:pointer;
+      box-shadow:0 2px 6px rgba(0,0,0,0.25)">${index + 1}</div>`,
+    map: kakaoMap,
+    zIndex: 5,
+  })
+
+  const phoneRow = branch.phone
+    ? `<div style="color:#6b7280;font-size:11px;margin-top:3px">${branch.phone}</div>` : ''
+  const distRow  = branch.distance
+    ? `<div style="color:#9ca3af;font-size:10px;margin-top:2px">${Number(branch.distance).toLocaleString()}m</div>` : ''
+
+  const infoWindow = new window.kakao.maps.InfoWindow({
+    content: `
+      <div style="padding:10px 14px;font-size:12px;min-width:160px;max-width:220px;
+                  font-family:sans-serif;line-height:1.5;">
+        <b style="color:#1e3a8a">${branch.title}</b>
+        <div style="color:#6b7280;margin-top:3px;font-size:11px">${branch.address}</div>
+        ${phoneRow}${distRow}
+      </div>`,
+    removable: true,
+  })
+
+  // 라벨 클릭 → 인포윈도우 토글 (CustomOverlay는 일반 DOM이므로 직접 이벤트)
+  const node = labelOverlay.getContent?.()
+  if (node) {
+    const el = typeof node === 'string'
+      ? (() => { const d = document.createElement('div'); d.innerHTML = node; return d.firstChild })()
+      : node
+    if (el?.addEventListener) {
+      el.addEventListener('click', () => {
+        infoWindows.forEach(iw => iw !== infoWindow && iw.close())
+        if (infoWindow.getMap()) infoWindow.close()
+        else {
+          // InfoWindow는 Marker 기준이므로 임시 마커 없이 position으로 open
+          infoWindow.open(kakaoMap, { getPosition: () => pos })
+        }
+      })
+    }
+  }
+
+  branchMarkers.push(labelOverlay)
+  infoWindows.push(infoWindow)
+}
+
+function clearBranchMarkers() {
+  branchMarkers.forEach(m => m.setMap(null))
+  branchMarkers.length = 0
+  infoWindows.forEach(iw => iw.close())
+  infoWindows.length = 0
+}
+
+function renderBranches(list) {
+  clearBranchMarkers()
+  branches.value = list
+  list.forEach((b, i) => addBranchMarker(b, i))
+  if (list.length) {
+    kakaoMap.setCenter(new window.kakao.maps.LatLng(list[0].lat, list[0].lng))
+    kakaoMap.setLevel(4)
+  }
+}
+
+function focusBranch(branch) {
+  kakaoMap?.setCenter(new window.kakao.maps.LatLng(branch.lat, branch.lng))
+  kakaoMap?.setLevel(3)
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// 기능 1: 지역명 + 은행명 검색
+// ══════════════════════════════════════════════════════════════════════════
+
+async function searchByRegion() {
+  if (!regionInput.value.trim() && !bankInput.value.trim()) return
+  searching.value = true
+  errorMsg.value  = ''
+  try {
+    const params = new URLSearchParams({
+      region:  regionInput.value.trim(),
+      keyword: bankInput.value.trim() || '은행',
+    })
+    const res  = await fetch(`/api/branches/search/?${params}`)
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error ?? '검색 실패')
+    renderBranches(json.branches ?? [])
+    if (!json.branches?.length) errorMsg.value = '검색 결과가 없습니다.'
+  } catch (e) {
+    errorMsg.value = e.message
+  } finally {
+    searching.value = false
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// 기능 2: 현재 위치 기반 검색
+// ══════════════════════════════════════════════════════════════════════════
+
+async function locateAndSearch() {
+  locating.value  = true
+  errorMsg.value  = ''
+  currentArea.value = ''
   try {
     const pos = await new Promise((resolve, reject) =>
       navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000 })
@@ -68,136 +188,62 @@ async function locateMe() {
     const lat = pos.coords.latitude
     const lng = pos.coords.longitude
     userPos.value = { lat, lng }
-
-    if (!naverMap) initMap(lat, lng)
-    else setUserMarker(lat, lng)
-
-    await fetchReverseGeocode(lng, lat)
-    await searchNearby()
+    initMap(lat, lng, 5)
+    setUserOverlay(lat, lng)
+    await doLocationSearch(lat, lng)
   } catch (e) {
-    errorMsg.value = '위치 정보를 가져올 수 없습니다. 브라우저 위치 권한을 확인해 주세요.'
+    errorMsg.value = e.code === 1
+      ? '위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해 주세요.'
+      : '위치 정보를 가져올 수 없습니다.'
   } finally {
-    loadingLoc.value = false
+    locating.value = false
   }
 }
 
-// ── Reverse Geocoding (주소 표시) ─────────────────────────
-async function fetchReverseGeocode(lng, lat) {
+async function doLocationSearch(lat, lng) {
+  searching.value = true
   try {
-    const res  = await fetch(`/api/branches/reverse-geocode/?coords=${lng},${lat}`)
+    const params = new URLSearchParams({
+      lat:     lat,
+      lng:     lng,
+      keyword: nearbyKw.value.trim() || '은행',
+      radius:  3000,
+    })
+    const res  = await fetch(`/api/branches/search-by-location/?${params}`)
     const json = await res.json()
-    const results = json.results ?? []
-    if (results.length) {
-      const r    = results[0]
-      const area = r.region
-      currentAddress.value = [
-        area?.area1?.name,
-        area?.area2?.name,
-        area?.area3?.name,
-        r.land?.name,
-        r.land?.number1,
-      ].filter(Boolean).join(' ')
-    }
-  } catch (_) {}
+    if (!res.ok) throw new Error(json.error ?? '검색 실패')
+    currentArea.value = json.area ?? ''
+    renderBranches(json.branches ?? [])
+    if (!json.branches?.length) errorMsg.value = '주변에 검색 결과가 없습니다.'
+  } catch (e) {
+    errorMsg.value = e.message
+  } finally {
+    searching.value = false
+  }
 }
 
-// ── 주변 지점 검색 ─────────────────────────────────────────
-async function searchNearby() {
+async function searchNearbyAgain() {
   if (!userPos.value) return
-  loadingSearch.value = true
-  errorMsg.value      = ''
-  clearBranchMarkers()
-  try {
-    // 현재 위치 행정구역(시/구/동)을 앞에 붙여 근거리 결과 유도
-    const areaHint = currentAddress.value.split(' ').slice(0, 3).join(' ')
-    const query    = areaHint ? `${areaHint} ${searchQuery.value}` : searchQuery.value
-    const res  = await fetch(`/api/branches/search/?query=${encodeURIComponent(query)}&display=10`)
-    const json = await res.json()
-    const items = json.items ?? []
-
-    branches.value = items.map(item => {
-      // Naver 검색 API 좌표는 카텍 좌표계(KATECH) — 변환 없이 mapx/mapy 사용 (단위: 1e-7 degree)
-      const lat = item.mapy / 1e7
-      const lng = item.mapx / 1e7
-      const dist = calcDistance(userPos.value.lat, userPos.value.lng, lat, lng)
-      return {
-        title:    item.title.replace(/<[^>]+>/g, ''),
-        address:  item.roadAddress || item.address,
-        category: item.category,
-        lat, lng, dist,
-      }
-    }).sort((a, b) => a.dist - b.dist)
-
-    branches.value.forEach((b, i) => addBranchMarker(b, i))
-  } catch (e) {
-    errorMsg.value = '지점 검색에 실패했습니다.'
-  } finally {
-    loadingSearch.value = false
-  }
+  errorMsg.value = ''
+  await doLocationSearch(userPos.value.lat, userPos.value.lng)
 }
 
-// ── 마커 관리 ─────────────────────────────────────────────
-function addBranchMarker(branch, index) {
-  if (!naverMap) return
-  const marker = new window.naver.maps.Marker({
-    position: new window.naver.maps.LatLng(branch.lat, branch.lng),
-    map: naverMap,
-    icon: {
-      content: `<div style="background:#1d4ed8;color:white;font-size:11px;font-weight:bold;padding:3px 7px;border-radius:12px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.25)">${index + 1}</div>`,
-      anchor: new window.naver.maps.Point(14, 12),
-    },
-  })
-  const infoWindow = new window.naver.maps.InfoWindow({
-    content: `<div style="padding:8px 12px;font-size:12px;min-width:140px"><b>${branch.title}</b><br><span style="color:#6b7280">${branch.address}</span></div>`,
-    borderWidth: 0,
-    backgroundColor: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.15)',
-  })
-  window.naver.maps.Event.addListener(marker, 'click', () => {
-    if (infoWindow.getMap()) infoWindow.close()
-    else infoWindow.open(naverMap, marker)
-  })
-  branchMarkers.push(marker)
-}
-
-function clearBranchMarkers() {
-  branchMarkers.forEach(m => m.setMap(null))
-  branchMarkers.length = 0
-}
-
-function focusBranch(branch) {
-  naverMap?.setCenter(new window.naver.maps.LatLng(branch.lat, branch.lng))
-  naverMap?.setZoom(17)
-}
-
-// ── 거리 계산 (Haversine) ─────────────────────────────────
-function calcDistance(lat1, lng1, lat2, lng2) {
-  const R  = 6371000
-  const dL = (lat2 - lat1) * Math.PI / 180
-  const dG = (lng2 - lng1) * Math.PI / 180
-  const a  = Math.sin(dL / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dG / 2) ** 2
-  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)))
-}
-
-function formatDist(m) {
-  return m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${m}m`
-}
+// ══════════════════════════════════════════════════════════════════════════
+// 라이프사이클
+// ══════════════════════════════════════════════════════════════════════════
 
 onMounted(async () => {
-  await loadNaverMapScript()
-  // 키 없이도 지도 틀 자체는 표시
-  if (NCP_CLIENT_ID) {
-    naverMap = new window.naver.maps.Map(mapEl.value, {
-      center: new window.naver.maps.LatLng(37.5665, 126.9780),
-      zoom: 13,
-    })
+  try {
+    await loadKakaoMapScript()
+    initMap()
+  } catch (e) {
+    errorMsg.value = '카카오맵 로드에 실패했습니다. Kakao Developers 콘솔에서 https://localhost:5173 도메인이 등록되어 있는지 확인해 주세요.'
   }
 })
 
 onUnmounted(() => {
   clearBranchMarkers()
-  if (userMarker) userMarker.setMap(null)
+  userOverlay?.setMap(null)
 })
 </script>
 
@@ -207,87 +253,121 @@ onUnmounted(() => {
     <main class="pt-24 pb-16 max-w-3xl mx-auto px-4 sm:px-6">
 
       <!-- 헤더 -->
-      <div class="mb-6 flex items-center justify-between">
-        <div>
-          <div class="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-full mb-3 border border-emerald-100">
-            <MapPin class="w-3 h-3" />위치 기반
-          </div>
-          <h1 class="text-3xl font-extrabold text-gray-900 mb-1">지점 찾기</h1>
-          <p class="text-gray-400 text-sm">
-            {{ currentAddress || '인근 금융기관을 검색합니다' }}
-          </p>
+      <div class="mb-6">
+        <div class="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-full mb-3 border border-emerald-100">
+          <MapPin class="w-3 h-3" />지점 찾기
         </div>
+        <h1 class="text-3xl font-extrabold text-gray-900 mb-1">은행 지점 검색</h1>
+        <p class="text-gray-400 text-sm">지역명으로 검색하거나 내 위치 주변 지점을 찾아보세요</p>
+      </div>
+
+      <!-- 모드 탭 -->
+      <div class="flex gap-1 p-1 bg-white border border-gray-200 rounded-xl shadow-sm mb-4 w-fit">
         <button
-          @click="locateMe"
-          :disabled="loadingLoc"
-          class="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-blue-600 hover:border-blue-300 transition-colors shadow-sm disabled:opacity-50"
+          @click="mode = 'region'"
+          class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+          :class="mode === 'region' ? 'bg-blue-700 text-white shadow' : 'text-gray-500 hover:bg-gray-100'"
         >
-          <Loader v-if="loadingLoc" class="w-4 h-4 animate-spin" />
-          <Crosshair v-else class="w-4 h-4" />
-          내 위치
+          <Building2 class="w-4 h-4" />지역 검색
+        </button>
+        <button
+          @click="mode = 'location'"
+          class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+          :class="mode === 'location' ? 'bg-emerald-600 text-white shadow' : 'text-gray-500 hover:bg-gray-100'"
+        >
+          <Navigation class="w-4 h-4" />내 위치
         </button>
       </div>
 
-      <!-- 에러 -->
+      <!-- 기능 1 -->
+      <div v-if="mode === 'region'" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4">
+        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">지역 + 은행 검색</p>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <input
+            v-model="regionInput"
+            @keyup.enter="searchByRegion"
+            type="text"
+            placeholder="지역명  예) 부산진구, 강남구"
+            class="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+          />
+          <input
+            v-model="bankInput"
+            @keyup.enter="searchByRegion"
+            type="text"
+            placeholder="은행명  예) 국민은행, ATM"
+            class="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+          />
+          <button
+            @click="searchByRegion"
+            :disabled="searching"
+            class="flex items-center gap-1.5 px-5 py-2.5 bg-blue-700 text-white rounded-xl text-sm font-bold hover:bg-blue-800 transition-colors disabled:opacity-50"
+          >
+            <Loader2 v-if="searching" class="w-4 h-4 animate-spin" />
+            <Search v-else class="w-4 h-4" />검색
+          </button>
+        </div>
+        <p class="text-xs text-gray-400 mt-2">지역명만 입력해도 검색됩니다.</p>
+      </div>
+
+      <!-- 기능 2 -->
+      <div v-else class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4">
+        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">현재 위치 기반 검색 (반경 3km)</p>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <input
+            v-model="nearbyKw"
+            @keyup.enter="searchNearbyAgain"
+            type="text"
+            placeholder="은행명  예) 국민은행, ATM"
+            class="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
+          />
+          <button
+            @click="userPos ? searchNearbyAgain() : locateAndSearch()"
+            :disabled="locating || searching"
+            class="flex items-center gap-1.5 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-colors disabled:opacity-50"
+          >
+            <Loader2 v-if="locating || searching" class="w-4 h-4 animate-spin" />
+            <Crosshair v-else class="w-4 h-4" />
+            {{ locating ? '위치 확인 중...' : (userPos ? '재검색' : '내 위치로 검색') }}
+          </button>
+        </div>
+        <div v-if="currentArea" class="mt-2 flex items-center gap-1.5 text-xs text-emerald-700 font-semibold">
+          <MapPin class="w-3 h-3" />{{ currentArea }} 주변 검색 중
+        </div>
+        <p v-else class="text-xs text-gray-400 mt-2">버튼을 누르면 브라우저 위치 권한을 요청합니다.</p>
+      </div>
+
+      <!-- 오류 -->
       <div v-if="errorMsg" class="mb-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600 font-medium">
         {{ errorMsg }}
       </div>
 
       <!-- 지도 -->
       <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-4">
-        <div ref="mapEl" style="height: 320px; width: 100%;" />
+        <div ref="mapEl" style="height: 360px; width: 100%;" />
       </div>
 
-      <!-- 검색 바 -->
-      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-4">
-        <div class="flex gap-2">
-          <input
-            v-model="searchQuery"
-            @keyup.enter="searchNearby"
-            type="text"
-            placeholder="예: 국민은행, 우리은행, ATM"
-            class="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
-          />
-          <button
-            @click="searchNearby"
-            :disabled="loadingSearch || !userPos"
-            class="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-colors disabled:opacity-40"
-          >
-            <Loader v-if="loadingSearch" class="w-4 h-4 animate-spin" />
-            <Search v-else class="w-4 h-4" />
-            검색
-          </button>
-        </div>
-        <p v-if="!userPos" class="text-xs text-gray-400 mt-2 text-center">
-          먼저 '내 위치' 버튼을 눌러 현재 위치를 설정해 주세요
-        </p>
-      </div>
-
-      <!-- 지점 목록 -->
+      <!-- 결과 목록 -->
       <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
         <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">
-          인근 지점
-          <span v-if="branches.length" class="ml-1 text-emerald-600">{{ branches.length }}개</span>
+          검색 결과
+          <span v-if="branches.length" class="ml-1 text-blue-600">{{ branches.length }}개</span>
         </p>
 
-        <!-- 스켈레톤 -->
-        <div v-if="loadingSearch" class="space-y-3">
-          <div v-for="i in 4" :key="i" class="flex items-center gap-3 p-3 rounded-xl border border-gray-100 animate-pulse">
+        <div v-if="searching" class="space-y-3">
+          <div v-for="i in 5" :key="i" class="flex items-center gap-3 p-3 rounded-xl border border-gray-100 animate-pulse">
             <div class="w-10 h-10 bg-gray-200 rounded-xl flex-shrink-0" />
-            <div class="flex-1 space-y-1.5">
+            <div class="flex-1 space-y-2">
               <div class="w-40 h-4 bg-gray-200 rounded" />
               <div class="w-56 h-3 bg-gray-200 rounded" />
             </div>
-            <div class="w-10 h-4 bg-gray-200 rounded" />
           </div>
         </div>
 
-        <!-- 빈 상태 -->
-        <div v-else-if="branches.length === 0" class="text-center py-8 text-sm text-gray-400">
-          {{ userPos ? '검색 결과가 없습니다.' : '위치를 설정하면 인근 지점이 표시됩니다.' }}
+        <div v-else-if="!branches.length" class="text-center py-10 text-sm text-gray-400">
+          <MapPin class="w-8 h-8 mx-auto mb-2 opacity-20" />
+          검색어를 입력하고 검색 버튼을 눌러주세요.
         </div>
 
-        <!-- 지점 리스트 -->
         <div v-else class="space-y-2">
           <div
             v-for="(branch, i) in branches"
@@ -295,16 +375,29 @@ onUnmounted(() => {
             @click="focusBranch(branch)"
             class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer border border-gray-100"
           >
-            <div class="w-10 h-10 bg-blue-700 rounded-xl flex items-center justify-center text-white text-xs font-black flex-shrink-0">
-              {{ i + 1 }}
-            </div>
+            <div
+              class="w-10 h-10 rounded-xl flex items-center justify-center text-white text-xs font-black flex-shrink-0"
+              :class="mode === 'region' ? 'bg-blue-700' : 'bg-emerald-600'"
+            >{{ i + 1 }}</div>
             <div class="flex-1 min-w-0">
               <p class="font-bold text-gray-900 text-sm truncate">{{ branch.title }}</p>
               <p class="text-xs text-gray-400 truncate">{{ branch.address }}</p>
+              <div class="flex items-center gap-2 mt-0.5">
+                <span v-if="branch.phone" class="text-xs text-gray-300 flex items-center gap-0.5">
+                  <Phone class="w-3 h-3" />{{ branch.phone }}
+                </span>
+                <span v-if="branch.distance" class="text-xs text-emerald-500 font-semibold">
+                  {{ Number(branch.distance).toLocaleString() }}m
+                </span>
+              </div>
             </div>
-            <div class="text-right flex-shrink-0">
-              <p class="text-xs font-extrabold text-blue-600">{{ formatDist(branch.dist) }}</p>
-            </div>
+            <a
+              :href="`https://map.kakao.com/link/to/${encodeURIComponent(branch.title)},${branch.lat},${branch.lng}`"
+              target="_blank"
+              rel="noopener noreferrer"
+              @click.stop
+              class="flex items-center gap-1 px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 rounded-lg text-xs font-bold flex-shrink-0 transition-colors"
+            ><Route class="w-3 h-3" />길찾기</a>
           </div>
         </div>
       </div>

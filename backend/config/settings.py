@@ -18,6 +18,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',
     'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
@@ -31,6 +32,7 @@ INSTALLED_APPS = [
     'news',
     'stocks',
     'community',
+    'chatbot',
 ]
 
 MIDDLEWARE = [
@@ -132,11 +134,12 @@ REST_FRAMEWORK = {
     ),
 }
 
-# Naver Cloud Platform — Dynamic Map, Reverse Geocoding
-NCP_MAP_CLIENT_ID     = os.environ.get('NCP_MAP_CLIENT_ID', '')
-NCP_MAP_CLIENT_SECRET = os.environ.get('NCP_MAP_CLIENT_SECRET', '')
+# Kakao Developers — 장소 검색 REST API
+KAKAO_REST_API_KEY = os.environ.get('KAKAO_REST_API_KEY', '')
 
-# Naver Developers — 지역 검색 API
+# ── Naver 계열 (사용 안 함) ──────────────────────────────────────────────────
+# NCP_MAP_CLIENT_ID     = os.environ.get('NCP_MAP_CLIENT_ID', '')
+# NCP_MAP_CLIENT_SECRET = os.environ.get('NCP_MAP_CLIENT_SECRET', '')
 NAVER_SEARCH_CLIENT_ID     = os.environ.get('NAVER_SEARCH_CLIENT_ID', '')
 NAVER_SEARCH_CLIENT_SECRET = os.environ.get('NAVER_SEARCH_CLIENT_SECRET', '')
 
@@ -144,3 +147,12 @@ NAVER_SEARCH_CLIENT_SECRET = os.environ.get('NAVER_SEARCH_CLIENT_SECRET', '')
 FIXTURE_DIRS = [
     os.path.join(BASE_DIR, 'fixtures'),
 ]
+
+# Gmail SMTP
+EMAIL_BACKEND       = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST          = 'smtp.gmail.com'
+EMAIL_PORT          = 587
+EMAIL_USE_TLS       = True
+EMAIL_HOST_USER     = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL  = EMAIL_HOST_USER
