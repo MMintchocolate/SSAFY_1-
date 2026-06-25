@@ -192,20 +192,15 @@ def change_google_password(request):
     uid   = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
 
+    reset_link = f'https://localhost:5173/reset-password?uid={uid}&token={token}'
     try:
         send_mail(
             subject='[SafeFinance] 비밀번호 재설정 안내',
             message=(
                 f'안녕하세요, {user.nickname or user.username}님.\n\n'
-                f'아래 재설정 코드를 복사하여 비밀번호 변경 페이지에 입력해 주세요.\n'
-                f'코드는 발급 후 1시간 동안 유효합니다.\n\n'
-                f'━━━━━━━━━━━━━━━━━━━━\n'
-                f'UID   : {uid}\n'
-                f'TOKEN : {token}\n'
-                f'━━━━━━━━━━━━━━━━━━━━\n\n'
-                f'[비밀번호 변경 방법]\n'
-                f'브라우저 주소창에 직접 입력하세요:\n'
-                f'localhost:5173/reset-password\n\n'
+                f'아래 링크를 클릭하면 비밀번호 재설정 페이지로 이동합니다.\n'
+                f'링크는 발급 후 1시간 동안 유효합니다.\n\n'
+                f'{reset_link}\n\n'
                 f'본인이 요청하지 않았다면 이 메일을 무시하세요.'
             ),
             from_email=None,

@@ -217,6 +217,7 @@ async function removeWatch(symbol) {
 // ── 내가 쓴 글 ────────────────────────────────────────────
 const myPosts = ref([])
 const myPostsLoading = ref(false)
+const showAllPosts = ref(false)
 
 async function fetchMyPosts() {
   myPostsLoading.value = true
@@ -485,9 +486,16 @@ onMounted(() => {
             <p class="text-sm font-bold" style="color:#0F122B">내가 쓴 글</p>
             <p style="font-size:0.72rem;color:#6F7485">{{ myPosts.length }}개</p>
           </div>
-          <RouterLink to="/community" class="ml-auto flex items-center gap-1 font-semibold transition-colors" style="font-size:0.72rem;color:#111827">
-            커뮤니티 <ChevronRight class="w-3.5 h-3.5" />
-          </RouterLink>
+          <div class="ml-auto flex items-center gap-3">
+            <button v-if="myPosts.length > 3" @click="showAllPosts = true"
+              class="flex items-center gap-1 font-semibold transition-colors"
+              style="font-size:0.72rem;color:#0D9B7A">
+              전체보기 <ChevronRight class="w-3.5 h-3.5" />
+            </button>
+            <RouterLink to="/community" class="flex items-center gap-1 font-semibold transition-colors" style="font-size:0.72rem;color:#6F7485">
+              커뮤니티 <ChevronRight class="w-3.5 h-3.5" />
+            </RouterLink>
+          </div>
         </div>
         <div v-if="myPostsLoading" class="px-5 pb-5 space-y-2">
           <div v-for="i in 3" :key="i" class="h-14 rounded-xl animate-pulse" style="background:#EEF1F5"></div>
@@ -497,7 +505,7 @@ onMounted(() => {
           <p class="text-sm" style="color:#6F7485">아직 작성한 글이 없습니다</p>
         </div>
         <div v-else class="px-5 pb-5 space-y-2">
-          <RouterLink v-for="post in myPosts" :key="post.id" to="/community"
+          <RouterLink v-for="post in myPosts.slice(0, 3)" :key="post.id" to="/community"
             class="flex items-start gap-3 px-4 py-3 rounded-xl transition-colors block hover:bg-[#F8F9FF]"
             style="background:#F8F9FF"
           >
@@ -514,8 +522,58 @@ onMounted(() => {
               </div>
             </div>
           </RouterLink>
+          <button v-if="myPosts.length > 3" @click="showAllPosts = true"
+            class="w-full py-2.5 rounded-xl text-sm font-semibold transition-colors"
+            style="border:1.5px dashed #D1D5DB;color:#6F7485">
+            +{{ myPosts.length - 3 }}개 더 보기
+          </button>
         </div>
       </div>
+
+      <!-- 전체 글 목록 모달 -->
+      <Teleport to="body">
+        <div v-if="showAllPosts"
+          class="fixed inset-0 z-50 flex items-center justify-center"
+          style="background:rgba(15,18,43,0.5);backdrop-filter:blur(4px)"
+          @click.self="showAllPosts = false"
+        >
+          <div class="relative w-full max-w-lg mx-4 rounded-2xl overflow-hidden flex flex-col"
+            style="background:white;max-height:80vh;box-shadow:0 20px 60px rgba(15,18,43,0.2)">
+            <div class="flex items-center gap-3 px-5 py-4" style="border-bottom:1px solid #EEF1F5">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:#DFFAF4">
+                <PencilLine class="w-4 h-4" style="color:#0D9B7A" />
+              </div>
+              <div>
+                <p class="font-bold text-sm" style="color:#0F122B">내가 쓴 글</p>
+                <p style="font-size:0.72rem;color:#6F7485">전체 {{ myPosts.length }}개</p>
+              </div>
+              <button @click="showAllPosts = false"
+                class="ml-auto w-8 h-8 flex items-center justify-center rounded-xl transition-colors hover:bg-[#F4F5F8]"
+                style="color:#6F7485;font-size:1rem">✕</button>
+            </div>
+            <div class="overflow-y-auto px-5 py-4 space-y-2">
+              <RouterLink v-for="post in myPosts" :key="post.id" to="/community"
+                @click="showAllPosts = false"
+                class="flex items-start gap-3 px-4 py-3 rounded-xl transition-colors block hover:bg-[#F8F9FF]"
+                style="background:#F8F9FF"
+              >
+                <span class="font-bold px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5"
+                  style="font-size:0.72rem"
+                  :style="post.board_type === 'stock' ? 'background:#DFFAF4;color:#0D9B7A;border:1px solid #57E0C3' : 'background:#FFF8E6;color:#B8860B;border:1px solid #FFD76A'"
+                >{{ boardLabel(post.board_type) }}</span>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-semibold truncate" style="color:#0F122B">{{ post.title }}</p>
+                  <div class="flex items-center gap-3 mt-0.5">
+                    <span style="font-size:0.72rem;color:#6F7485">{{ fmtDate(post.created_at) }}</span>
+                    <span class="flex items-center gap-0.5" style="font-size:0.72rem;color:#6F7485"><Eye class="w-3 h-3" />{{ post.view_count }}</span>
+                    <span class="flex items-center gap-0.5" style="font-size:0.72rem;color:#6F7485"><MessageCircle class="w-3 h-3" />{{ post.comment_count }}</span>
+                  </div>
+                </div>
+              </RouterLink>
+            </div>
+          </div>
+        </div>
+      </Teleport>
 
       <!-- 내가 쓴 댓글 -->
       <div class="rounded-2xl overflow-hidden" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
