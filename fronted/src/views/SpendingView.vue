@@ -446,7 +446,7 @@ function heatText(intensity) { return intensity > 0.5 ? '#fff' : '#374151' }
             <p class="font-extrabold" style="font-size:1.5rem;color:#0F122B">{{ fmt(stats.summary.daily_avg) }}<span style="font-size:1rem;font-weight:700;margin-left:4px">원</span></p>
           </div>
           <div class="rounded-2xl p-5" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
-            <p class="font-bold mb-1" style="font-size:0.72rem;color:#6F7485;letter-spacing:0.08em">{{ isOut ? '최다 지출일' : '최다 수입일' }}</p>
+            <p class="font-bold mb-1" style="font-size:0.72rem;color:#6F7485;letter-spacing:0.08em">{{ isOut ? '최다 지출액' : '최다 수입액' }}</p>
             <template v-if="stats.summary.max_day">
               <p class="font-extrabold" style="font-size:1.5rem;color:#FFA726">{{ fmt(stats.summary.max_day.amount) }}<span style="font-size:1rem;font-weight:700;margin-left:4px">원</span></p>
               <p class="mt-1" style="font-size:0.75rem;color:#6F7485">{{ stats.summary.max_day.date }}</p>

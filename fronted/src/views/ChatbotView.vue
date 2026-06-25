@@ -64,8 +64,8 @@ async function scrollBottom() {
       <!-- 헤더 -->
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 bg-blue-100 rounded-2xl flex items-center justify-center">
-            <Bot class="w-5 h-5 text-blue-700" />
+          <div class="w-10 h-10 bg-[#DFFAF4] rounded-2xl flex items-center justify-center">
+            <Bot class="w-5 h-5 text-[#0D9B7A]" />
           </div>
           <div>
             <h1 class="text-lg font-extrabold text-gray-900">AI 챗봇</h1>
@@ -97,30 +97,30 @@ async function scrollBottom() {
         <!-- 메시지 버블 -->
         <div v-for="(msg, i) in messages" :key="i" class="flex gap-3" :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
           <!-- 모델 아바타 -->
-          <div v-if="msg.role === 'model'" class="w-7 h-7 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
-            <Bot class="w-4 h-4 text-blue-700" />
+          <div v-if="msg.role === 'model'" class="w-7 h-7 bg-[#DFFAF4] rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+            <Bot class="w-4 h-4 text-[#0D9B7A]" />
           </div>
 
           <!-- 말풍선 -->
           <div
             class="max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap"
             :class="msg.role === 'user'
-              ? 'bg-blue-700 text-white rounded-tr-sm'
+              ? 'bg-[#57E0C3] text-gray-900 rounded-tr-sm'
               : 'bg-gray-100 text-gray-800 rounded-tl-sm'"
           >
             {{ msg.text }}
           </div>
 
           <!-- 유저 아바타 -->
-          <div v-if="msg.role === 'user'" class="w-7 h-7 bg-blue-700 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
-            <User class="w-4 h-4 text-white" />
+          <div v-if="msg.role === 'user'" class="w-7 h-7 bg-[#57E0C3] rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+            <User class="w-4 h-4 text-gray-900" />
           </div>
         </div>
 
         <!-- 로딩 버블 -->
         <div v-if="loading" class="flex gap-3 justify-start">
-          <div class="w-7 h-7 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-            <Bot class="w-4 h-4 text-blue-700" />
+          <div class="w-7 h-7 bg-[#DFFAF4] rounded-xl flex items-center justify-center flex-shrink-0">
+            <Bot class="w-4 h-4 text-[#0D9B7A]" />
           </div>
           <div class="bg-gray-100 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5">
             <span class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay:0ms"></span>
@@ -140,12 +140,12 @@ async function scrollBottom() {
           @keydown.enter.prevent="send"
           placeholder="메시지를 입력하세요..."
           :disabled="loading"
-          class="flex-1 px-4 py-3 rounded-2xl border border-gray-200 bg-white text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:opacity-50 transition-all"
+          class="flex-1 px-4 py-3 rounded-2xl border border-gray-200 bg-white text-sm outline-none focus:border-[#57E0C3] focus:ring-2 focus:ring-[#57E0C3]/30 disabled:opacity-50 transition-all"
         />
         <button
           @click="send"
           :disabled="!input.trim() || loading"
-          class="w-12 h-12 flex items-center justify-center rounded-2xl bg-blue-700 text-white hover:bg-blue-800 disabled:opacity-40 transition-all flex-shrink-0"
+          class="w-12 h-12 flex items-center justify-center rounded-2xl bg-[#57E0C3] text-gray-900 hover:bg-[#3FD4B5] disabled:opacity-40 transition-all flex-shrink-0"
         >
           <Loader2 v-if="loading" class="w-4 h-4 animate-spin" />
           <Send v-else class="w-4 h-4" />

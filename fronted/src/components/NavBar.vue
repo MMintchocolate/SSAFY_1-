@@ -16,7 +16,7 @@ const mobileCommunityOpen = ref(false)
 const navLinks = [
   { label: '금융상품',      to: '/products' },
   { label: '지점찾기',      to: '/branches' },
-  { label: '지출분석',      to: '/spending' },
+  { label: '소비분석',      to: '/spending' },
   { label: '금 시세',       to: '/app/gold' },
   { label: '뉴스',          to: '/news' },
   { label: '내 포트폴리오', to: '/app/portfolio' },

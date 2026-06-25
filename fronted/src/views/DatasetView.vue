@@ -451,7 +451,7 @@ function isExtra(sym) {
           <div class="rounded-2xl p-5 space-y-5" style="background:white;border:1.5px solid #57E0C3;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
             <div class="flex items-center justify-between">
               <h3 class="font-black" style="color:#0F122B">
-                <span style="color:#57E0C3">{{ activeResult }}</span> 학습 결과
+                <span style="color:#0F122B">{{ activeResult }}</span> 학습 결과
               </h3>
               <button @click="activeResult = null" class="p-1 rounded-lg" style="color:#6F7485">
                 <X class="w-4 h-4" />

@@ -51,8 +51,8 @@ function goLogin() {
           >
             <X class="w-4 h-4" />
           </button>
-          <div class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <LogIn class="w-7 h-7 text-blue-600" />
+          <div class="w-14 h-14 bg-[#DFFAF4] rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <LogIn class="w-7 h-7 text-[#0D9B7A]" />
           </div>
           <h2 class="text-lg font-black text-gray-900 mb-1">로그인이 필요합니다</h2>
           <p class="text-sm text-gray-500 mb-6">이 기능을 사용하려면 로그인해 주세요.</p>
@@ -65,7 +65,7 @@ function goLogin() {
             </button>
             <button
               @click="goLogin"
-              class="flex-1 py-2.5 bg-blue-700 text-white text-sm font-bold rounded-xl hover:bg-blue-800 transition-colors"
+              class="flex-1 py-2.5 bg-[#57E0C3] text-gray-900 text-sm font-bold rounded-xl hover:bg-[#3FD4B5] transition-colors"
             >
               로그인하기
             </button>

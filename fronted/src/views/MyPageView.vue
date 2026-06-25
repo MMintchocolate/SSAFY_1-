@@ -410,7 +410,7 @@ onMounted(() => {
             <p class="text-sm font-bold" style="color:#0F122B">지출내역서 파일</p>
             <p style="font-size:0.72rem;color:#6F7485">KB국민·신한·우리 등 CSV 파일 업로드</p>
           </div>
-          <RouterLink to="/spending" class="ml-auto flex items-center gap-1 font-semibold transition-colors" style="font-size:0.72rem;color:#57E0C3">
+          <RouterLink to="/spending" class="ml-auto flex items-center gap-1 font-semibold transition-colors" style="font-size:0.72rem;color:#111827">
             분석 보기 <ChevronRight class="w-3.5 h-3.5" />
           </RouterLink>
         </div>
@@ -447,7 +447,7 @@ onMounted(() => {
             <p class="text-sm font-bold" style="color:#0F122B">관심 주식</p>
             <p style="font-size:0.72rem;color:#6F7485">{{ watchlist.length }}개 종목 등록됨</p>
           </div>
-          <RouterLink to="/stocks" class="ml-auto flex items-center gap-1 font-semibold transition-colors" style="font-size:0.72rem;color:#57E0C3">
+          <RouterLink to="/stocks" class="ml-auto flex items-center gap-1 font-semibold transition-colors" style="font-size:0.72rem;color:#111827">
             주식 검색 <ChevronRight class="w-3.5 h-3.5" />
           </RouterLink>
         </div>
@@ -485,7 +485,7 @@ onMounted(() => {
             <p class="text-sm font-bold" style="color:#0F122B">내가 쓴 글</p>
             <p style="font-size:0.72rem;color:#6F7485">{{ myPosts.length }}개</p>
           </div>
-          <RouterLink to="/community" class="ml-auto flex items-center gap-1 font-semibold transition-colors" style="font-size:0.72rem;color:#57E0C3">
+          <RouterLink to="/community" class="ml-auto flex items-center gap-1 font-semibold transition-colors" style="font-size:0.72rem;color:#111827">
             커뮤니티 <ChevronRight class="w-3.5 h-3.5" />
           </RouterLink>
         </div>

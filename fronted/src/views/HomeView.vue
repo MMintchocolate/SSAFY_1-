@@ -21,7 +21,7 @@ import {
   ArrowRight,
   ChevronLeft,
   ChevronRight,
-  Star,
+  FileText,
   Search,
   Loader2,
   Newspaper,
@@ -38,6 +38,11 @@ ChartJS.register(
   Filler
 );
 
+// 시작하기 버튼: 로그인 상태면 금융상품, 로그아웃 상태면 로그인 페이지로
+const startLink = computed(() =>
+  localStorage.getItem("access") ? "/app/products" : "/login"
+);
+
 // ─── 주요 기능 카드 ───────────────────────────────────────────────────────────
 const features = [
   {
@@ -49,17 +54,17 @@ const features = [
     iconColor: "#0D9B7A",
   },
   {
-    to: "/app/products",
-    title: "맞춤형 금융 추천",
-    desc: "AI가 분석한 맞춤형 금융상품을 추천해드려요",
-    icon: Star,
+    to: "/app/spending",
+    title: "소비 패턴 분석",
+    desc: "나의 소비내용을 한눈에 확인해보세요",
+    icon: FileText,
     bg: "#FFF8E6",
     iconColor: "#B8860B",
   },
   {
     to: "/app/stocks",
     title: "실시간 주식 정보",
-    desc: "국내외 주식 정보를 실시간으로 확인할 수 있어요",
+    desc: "국내외 주식을 실시간으로 확인해보세요",
     icon: TrendingUp,
     bg: "#EEF1F5",
     iconColor: "#3B4FD8",
@@ -67,7 +72,7 @@ const features = [
   {
     to: "/app/branches",
     title: "은행 및 ATM 찾기",
-    desc: "내 주변 은행과 ATM 위치를 쉽게 찾아보세요",
+    desc: "내 주변 은행·ATM을 빠르게 찾아보세요",
     icon: MapPin,
     bg: "#F5F0FF",
     iconColor: "#7C3AED",
@@ -380,7 +385,7 @@ onUnmounted(() => {
 
           <div class="flex items-center gap-3 flex-wrap">
             <RouterLink
-              to="/app/products"
+              :to="startLink"
               class="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl font-bold text-white transition-all hover:opacity-90 active:scale-95"
               style="
                 background: #0f122b;

@@ -1,76 +1,38 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { Wallet, TrendingUp, Coins, Newspaper, MessagesSquare, MapPin } from '@lucide/vue'
 
 const router = useRouter()
 
-const canvasEl     = ref(null)
-const descriptorOn = ref(false)
-const lettersOn    = ref(0)
-const accentOn     = ref(false)
-const taglineOn    = ref(false)
-const scrollOn     = ref(false)
-
-let raf           = null
-let cleanupResize = () => {}
+// ── 인트로 애니메이션 상태 (랜딩페이지와 동일) ──────────
+const cloudOn   = ref(false)  // 배경 블러
+const yellowOn  = ref(false)  // 노란 점
+const mintOn    = ref(false)  // 민트 점
+const smileOn   = ref(false)  // 웃는 곡선
+const lettersOn = ref(0)      // moni 로고 텍스트 (한 글자씩)
+const taglineOn = ref(false)  // 슬로건
+const scrollOn  = ref(false)  // 스크롤 아이콘
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
-function initParticles() {
-  const el = canvasEl.value
-  if (!el) return
-  const ctx = el.getContext('2d')
-  let W = el.width  = el.offsetWidth
-  let H = el.height = el.offsetHeight
-  const onResize = () => { W = el.width = el.offsetWidth; H = el.height = el.offsetHeight }
-  window.addEventListener('resize', onResize)
-  const N = 90, MAX = 175
-  const pts = Array.from({ length: N }, () => ({
-    x: Math.random() * W, y: Math.random() * H,
-    vx: (Math.random() - 0.5) * 0.35, vy: (Math.random() - 0.5) * 0.35,
-    r: Math.random() * 1.2 + 0.4,
-  }))
-  function tick() {
-    ctx.clearRect(0, 0, W, H)
-    for (const p of pts) {
-      p.x += p.vx; p.y += p.vy
-      if (p.x < 0 || p.x > W) p.vx *= -1
-      if (p.y < 0 || p.y > H) p.vy *= -1
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
-      ctx.fillStyle = 'rgba(87,224,195,0.5)'; ctx.fill()
-    }
-    for (let i = 0; i < N; i++) {
-      for (let j = i + 1; j < N; j++) {
-        const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y
-        const d = Math.sqrt(dx*dx + dy*dy)
-        if (d < MAX) {
-          ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y)
-          ctx.strokeStyle = `rgba(87,224,195,${(1 - d/MAX) * 0.18})`
-          ctx.lineWidth = 0.55; ctx.stroke()
-        }
-      }
-    }
-    raf = requestAnimationFrame(tick)
-  }
-  tick()
-  return () => window.removeEventListener('resize', onResize)
-}
-
 onMounted(async () => {
-  cleanupResize = initParticles() ?? (() => {})
-  await sleep(150)
-  descriptorOn.value = true
-  await sleep(200)
-  for (let i = 1; i <= 4; i++) { lettersOn.value = i; await sleep(80) }
   await sleep(300)
-  accentOn.value = taglineOn.value = true
-  await sleep(250)
-  scrollOn.value = true
-})
-
-onUnmounted(() => {
-  cleanupResize()
-  if (raf) cancelAnimationFrame(raf)
+  cloudOn.value = true        // 배경 블러도 로고와 함께 서서히 생성
+  yellowOn.value = true       // 노란 점
+  await sleep(450)
+  mintOn.value = true         // 민트 점
+  await sleep(330)
+  smileOn.value = true        // 웃는 곡선
+  await sleep(560)
+  for (let i = 1; i <= 4; i++) {   // moni 한 글자씩
+    lettersOn.value = i
+    await sleep(165)
+  }
+  await sleep(300)
+  taglineOn.value = true      // 슬로건
+  await sleep(420)
+  scrollOn.value = true       // 스크롤 아이콘
 })
 
 function goStart() {
@@ -102,7 +64,7 @@ const featured = [
     badge: 'ML 기반',
     badgeBg: '#FFF8E6',
     badgeColor: '#B8860B',
-    accent: '#FFD76A',
+    accent: '#FFC62A',
     title: 'AI가 포착하는 매수 타이밍',
     desc: 'RSI, MACD, 이동평균 등 핵심 기술적 지표를 종합 분석합니다.\n머신러닝 모델이 실시간으로 매수·매도 신호를 계산해 드립니다.',
     img: '/screenshots/indicators.png',
@@ -114,9 +76,9 @@ const featured = [
     id: 'dataset',
     label: 'ML 데이터',
     badge: '모델 학습',
-    badgeBg: '#F0EDFF',
-    badgeColor: '#7C3AED',
-    accent: '#A78BFA',
+    badgeBg: '#DFFAF4',
+    badgeColor: '#0D9B7A',
+    accent: '#57E0C3',
     title: '직접 학습시키는 AI 예측 모델',
     desc: '원하는 종목의 과거 데이터로 LightGBM 모델을 직접 학습시킵니다.\n학습된 모델로 다음 날 주가 방향을 예측하고 정확도를 확인할 수 있습니다.',
     img: '/screenshots/dataset.png',
@@ -127,56 +89,64 @@ const featured = [
     id: 'pdf',
     label: 'PDF 생성',
     badge: '자동화',
-    badgeBg: '#FFF5F5',
-    badgeColor: '#E5323B',
-    accent: '#E5323B',
-    title: '영수증·장부를 PDF로 즉시 출력',
-    desc: '입력된 영수증 데이터를 깔끔한 PDF 장부로 자동 생성합니다.\n지출 내역을 보고서 형태로 저장하고 언제든 다운로드할 수 있습니다.',
+    badgeBg: '#FFF8E6',
+    badgeColor: '#B8860B',
+    accent: '#FFC62A',
+    title: '소비 내역을 PDF로 즉시 출력',
+    desc: '입력된 소비 내역 데이터를 깔끔한 PDF 리포트로 자동 생성합니다.\n지출 내역을 보고서 형태로 저장하고 언제든 다운로드할 수 있습니다.',
     img: '/screenshots/pdf.png',
     to: '/app/receipts',
-    features: ['영수증 자동 파싱', 'PDF 장부 생성', '다운로드 & 공유'],
+    features: ['PDF 리포트 생성', '다운로드 & 공유'],
     reverse: true,
   },
 ]
 
 const simple = [
-  { emoji: '📊', title: '금융상품 비교', desc: '예금·적금 최고금리 TOP 상품을 한눈에', to: '/app/products', accent: '#57E0C3' },
-  { emoji: '📈', title: '실시간 주식',   desc: '국내 주식 시세·차트 실시간 확인',        to: '/app/stocks',   accent: '#FFD76A' },
-  { emoji: '🥇', title: '금 시세',       desc: '국제 금 시세와 환율 실시간 추적',         to: '/app/gold',     accent: '#FFA726' },
-  { emoji: '📰', title: '금융 뉴스',     desc: 'AI 요약 금융·경제 뉴스 모아보기',        to: '/app/news',     accent: '#A78BFA' },
-  { emoji: '💬', title: '커뮤니티',      desc: '주식 토론과 자유로운 이야기',             to: '/app/community',accent: '#4ECBA8' },
-  { emoji: '📍', title: '지점 찾기',     desc: '내 주변 은행·ATM 위치 검색',             to: '/app/branches', accent: '#60A5FA' },
+  { icon: Wallet,         title: '금융상품 비교', desc: '예금·적금 최고금리 TOP 상품을 한눈에', to: '/app/products', accent: '#57E0C3' },
+  { icon: TrendingUp,     title: '실시간 주식',   desc: '국내 주식 시세·차트 실시간 확인',        to: '/app/stocks',   accent: '#FFC62A' },
+  { icon: Coins,          title: '금 시세',       desc: '국제 금 시세와 환율 실시간 추적',         to: '/app/gold',     accent: '#57E0C3' },
+  { icon: Newspaper,      title: '금융 뉴스',     desc: 'AI 요약 금융·경제 뉴스 모아보기',        to: '/app/news',     accent: '#FFC62A' },
+  { icon: MessagesSquare, title: '커뮤니티',      desc: '주식 토론과 자유로운 이야기',             to: '/app/community',accent: '#57E0C3' },
+  { icon: MapPin,         title: '지점 찾기',     desc: '내 주변 은행·ATM 위치 검색',             to: '/app/branches', accent: '#FFC62A' },
 ]
 </script>
 
 <template>
   <div class="page">
 
-    <!-- ══════════ HERO 인트로 ══════════ -->
+    <!-- ══════════ HERO 인트로 (랜딩페이지와 동일한 로고/스크롤) ══════════ -->
     <section class="intro">
-      <canvas ref="canvasEl" class="stars" />
-      <div class="bg-glow" />
+      <!-- Background blur clouds -->
+      <div class="cloud cloud-yellow hero-cloud-1" :class="{ show: cloudOn }"></div>
+      <div class="cloud cloud-mint hero-cloud-2" :class="{ show: cloudOn }"></div>
+
       <div class="center-block">
-        <p class="descriptor" :class="{ show: descriptorOn }">PERSONAL FINANCE PLATFORM</p>
-        <div class="moni-text" aria-label="moni">
-          <span v-for="(l, i) in ['m','o','n','i']" :key="i" class="lc">
-            <span class="lt" :class="{ show: lettersOn > i }">{{ l }}</span>
-          </span>
-        </div>
-        <div class="accent-line" :class="{ show: accentOn }" />
+        <p class="descriptor" :class="{ show: cloudOn }">PERSONAL FINANCE PLATFORM</p>
+
+        <!-- 로고: 점 + 점 + 웃는 곡선 -->
+        <svg class="logo-icon" viewBox="0 0 100 80" xmlns="http://www.w3.org/2000/svg">
+          <circle class="dot" :class="{ show: yellowOn }" cx="28" cy="24" r="14" fill="#FFC62A" />
+          <circle class="dot" :class="{ show: mintOn }"   cx="72" cy="24" r="14" fill="#57E0C3" />
+          <path class="smile" :class="{ drawn: smileOn }"
+                d="M 10,56 Q 50,82 90,56"
+                stroke="#111827" stroke-width="7" fill="none" stroke-linecap="round" />
+        </svg>
+
+        <!-- 브랜드명 — 한 글자씩 등장 -->
+        <h1 class="brand">
+          <span v-for="(l, i) in ['m','o','n','i']" :key="i"
+                class="bltr" :class="{ show: lettersOn > i }">{{ l }}</span>
+        </h1>
+
+        <!-- 슬로건 -->
         <p class="tagline" :class="{ show: taglineOn }">내 돈의 흐름을 더 똑똑하게, <em>moni</em></p>
       </div>
-      <div class="scroll-hint" :class="{ show: scrollOn }">
-        <span class="scroll-label">SCROLL</span>
-        <svg class="scroll-mouse" viewBox="0 0 24 38" fill="none">
-          <rect x="1" y="1" width="22" height="36" rx="11" stroke="rgba(87,224,195,0.25)" stroke-width="1.5"/>
-          <rect x="10.5" y="7" width="3" height="7" rx="1.5" fill="rgba(87,224,195,0.4)">
-            <animate attributeName="y" values="7;14;7" dur="1.6s" repeatCount="indefinite"/>
-            <animate attributeName="opacity" values="1;0.1;1" dur="1.6s" repeatCount="indefinite"/>
-          </rect>
-        </svg>
-        <svg class="scroll-arrow" viewBox="0 0 18 10" fill="none">
-          <path d="M1 1L9 9L17 1" stroke="rgba(87,224,195,0.25)" stroke-width="1.6" stroke-linecap="round"/>
+
+      <!-- 스크롤 아이콘 (랜딩페이지와 동일) -->
+      <div class="scroll-icon" :class="{ show: scrollOn }">
+        <svg viewBox="0 0 26 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1" y="1" width="24" height="40" rx="12" stroke="#cfcfcf" stroke-width="1.5" />
+          <circle class="wheel" cx="13" cy="11" r="2.6" fill="#bdbdbd" />
         </svg>
       </div>
     </section>
@@ -195,15 +165,15 @@ const simple = [
         <!-- 텍스트 -->
         <div class="feat-text">
           <span class="feat-badge" :style="`background:${item.badgeBg};color:${item.badgeColor}`">{{ item.badge }}</span>
-          <p class="feat-label" :style="`color:${item.accent}`">{{ item.label }}</p>
+          <p class="feat-label" :style="`color:${item.badgeColor}`">{{ item.label }}</p>
           <h3 class="feat-title">{{ item.title }}</h3>
           <p class="feat-desc">{{ item.desc }}</p>
           <ul class="feat-chips">
-            <li v-for="f in item.features" :key="f" class="feat-chip" :style="`border-color:${item.accent}33;color:${item.accent}`">
+            <li v-for="f in item.features" :key="f" class="feat-chip" :style="`border-color:${item.accent}55;color:${item.badgeColor}`">
               <span class="feat-dot" :style="`background:${item.accent}`"></span>{{ f }}
             </li>
           </ul>
-          <RouterLink :to="item.to" class="feat-btn" :style="`background:${item.accent};color:${item.id === 'indicators' ? '#0F122B' : item.id === 'spending' ? '#0F122B' : 'white'}`">
+          <RouterLink :to="item.to" class="feat-btn" :style="`background:${item.accent};color:#111827`">
             바로가기 →
           </RouterLink>
         </div>
@@ -219,7 +189,6 @@ const simple = [
             />
             <!-- 이미지 없을 때 placeholder -->
             <div class="shot-placeholder">
-              <div class="ph-icon">📸</div>
               <p class="ph-text">{{ item.label }} 스크린샷</p>
               <p class="ph-hint">fronted/public/screenshots/{{ item.id }}.png</p>
             </div>
@@ -232,13 +201,12 @@ const simple = [
     <section class="simple-wrap">
       <div class="features-header">
         <div class="features-badge">더 많은 기능</div>
-        <h2 class="features-title">모든 금융 정보를 <em>한 곳에서</em></h2>
+        <h2 class="features-title">모든 금융 정보를 <em class="accent-yellow">한 곳에서</em></h2>
       </div>
       <div class="simple-grid">
         <RouterLink v-for="s in simple" :key="s.title" :to="s.to" class="simple-card">
-          <div class="simple-icon" :style="`background:${s.accent}18`">
-            <span>{{ s.emoji }}</span>
-          </div>
+          <component :is="s.icon" class="simple-icon" :size="40" :stroke-width="1.5"
+                     :style="`color:${s.accent}`" />
           <p class="simple-title">{{ s.title }}</p>
           <p class="simple-desc">{{ s.desc }}</p>
           <span class="simple-arrow" :style="`color:${s.accent}`">→</span>
@@ -248,17 +216,20 @@ const simple = [
 
     <!-- ══════════ CTA ══════════ -->
     <section class="cta-wrap">
-      <div class="cta-glow" />
-      <svg class="cta-logo-svg" width="52" height="42" viewBox="0 0 46 38" fill="none">
-        <circle cx="15" cy="9" r="6" fill="#FFA726"/>
-        <circle cx="31" cy="9" r="6" fill="#4ECBA8"/>
-        <path d="M7 20 Q23 36 39 20" stroke="#57E0C3" stroke-width="6" stroke-linecap="round" fill="none"/>
+      <div class="cloud cloud-mint cta-cloud-1"></div>
+      <div class="cloud cloud-yellow cta-cloud-2"></div>
+
+      <!-- 로고: 랜딩페이지와 동일 -->
+      <svg class="cta-logo-svg" viewBox="0 0 100 80" fill="none">
+        <circle cx="28" cy="24" r="14" fill="#FFC62A"/>
+        <circle cx="72" cy="24" r="14" fill="#57E0C3"/>
+        <path d="M 10,56 Q 50,82 90,56" stroke="#111827" stroke-width="7" stroke-linecap="round" fill="none"/>
       </svg>
       <h2 class="cta-title">지금 바로 시작해보세요</h2>
       <p class="cta-sub">moni와 함께 더 스마트한 금융 생활을 경험하세요</p>
       <div class="cta-btns">
-        <button class="cta-primary" @click="goStart">시작하기</button>
-        <RouterLink to="/app/home" class="cta-secondary">홈으로</RouterLink>
+        <button class="cta-primary" @click="goStart">홈으로</button>
+
       </div>
     </section>
 
@@ -266,14 +237,46 @@ const simple = [
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&display=swap');
 
 .page {
   font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
-  background: #07080f;
-  color: #c8d0e8;
+  background: #fafafa;
+  color: #111827;
   width: 100%;
   overflow-x: hidden;
+}
+
+/* ─── Background blur clouds (랜딩페이지와 동일) ─────────── */
+.cloud {
+  position: absolute;
+  width: 1180px;
+  height: 620px;
+  filter: blur(85px);
+  opacity: 0.34;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(150px 150px at 14% 64%, var(--c) 68%, transparent 100%),
+    radial-gradient(190px 190px at 33% 48%, var(--c) 68%, transparent 100%),
+    radial-gradient(205px 205px at 52% 56%, var(--c) 68%, transparent 100%),
+    radial-gradient(180px 180px at 70% 50%, var(--c) 68%, transparent 100%),
+    radial-gradient(150px 150px at 87% 64%, var(--c) 68%, transparent 100%),
+    radial-gradient(180px 95px  at 50% 80%, var(--c) 68%, transparent 100%);
+  background-repeat: no-repeat;
+  animation: floatCloud 6s ease-in-out infinite;
+}
+.cloud-yellow { --c: #FFD24D; }
+.cloud-mint   { --c: #6CE9CF; }
+
+@keyframes floatCloud {
+  0%   { transform: translateX(0); }
+  25%  { transform: translateX(110px); }
+  50%  { transform: translateX(0); }
+  75%  { transform: translateX(-110px); }
+  100% { transform: translateX(0); }
 }
 
 /* ─── INTRO ─────────────────────────── */
@@ -283,73 +286,84 @@ const simple = [
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #07080f;
+  background: #fafafa;
   position: relative;
   overflow: hidden;
 }
-.stars {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%; z-index: 0;
-}
-.bg-glow {
-  position: absolute; inset: 0;
-  pointer-events: none; z-index: 1;
-  background:
-    radial-gradient(ellipse 70% 50% at 50% 44%, rgba(87,224,195,0.06) 0%, transparent 65%),
-    radial-gradient(ellipse 40% 30% at 50% 44%, rgba(200,208,232,0.03) 0%, transparent 70%);
-}
+.intro .cloud { opacity: 0; transition: opacity 1.8s ease; }
+.intro .cloud.show { opacity: 0.34; }
+.hero-cloud-1 { top: -200px; left: -340px; }
+.hero-cloud-2 { bottom: -220px; right: -340px; animation-delay: -3s; }
+
 .center-block {
   position: relative; z-index: 2;
   display: flex; flex-direction: column;
   align-items: center; gap: 0;
 }
 .descriptor {
-  font-size: 10px; font-weight: 700;
-  letter-spacing: 0.42em; color: rgba(87,224,195,0.35);
-  text-transform: uppercase; margin: 0 0 20px;
-  opacity: 0; transition: opacity 0.7s ease;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.42em; color: #0D9B7A;
+  text-transform: uppercase; margin: 0 0 26px;
+  opacity: 0; transition: opacity 0.9s ease;
 }
-.descriptor.show { opacity: 1; }
-.moni-text { display: flex; align-items: flex-end; }
-.lc { display: block; }
-.lt {
-  display: block;
-  font-family: 'M PLUS Rounded 1c', sans-serif;
-  font-size: clamp(80px, 14vw, 112px);
-  font-weight: 900; line-height: 1.0;
-  color: #c8d0e8; letter-spacing: 0.02em;
-  opacity: 0; transform: translateY(10px);
-  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+.descriptor.show { opacity: 0.65; }
+
+.logo-icon { width: 150px; }
+/* 점 등장 */
+.dot {
+  transform-origin: center;
+  transform: scale(0); opacity: 0;
+  transition: transform 0.4s cubic-bezier(0.34,1.45,0.64,1), opacity 0.3s ease;
 }
-.lt.show { opacity: 1; transform: translateY(0); }
-.accent-line {
-  width: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(87,224,195,0.6), transparent);
-  margin: 20px auto 18px;
-  transition: width 1.0s cubic-bezier(0.4,0,0.2,1) 0.1s;
+.dot.show { transform: scale(1); opacity: 1; }
+/* 웃는 곡선 그리기 */
+.smile {
+  stroke-dasharray: 170; stroke-dashoffset: 170;
+  transition: stroke-dashoffset 0.95s cubic-bezier(0.4,0,0.2,1);
 }
-.accent-line.show { width: 72px; }
+.smile.drawn { stroke-dashoffset: 0; }
+
+/* 브랜드명 — 한 글자씩 써지듯 등장 (Fredoka) */
+.brand {
+  display: flex; margin: 14px 0 0;
+  font-family: 'Fredoka', 'Baloo 2', sans-serif;
+  font-size: clamp(64px, 11vw, 88px);
+  font-weight: 600; line-height: 1;
+  color: #111827; letter-spacing: 0.005em;
+}
+.bltr {
+  display: inline-block;
+  opacity: 0; transform: translateY(8px) scale(0.82); filter: blur(4px);
+  transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.34,1.3,0.64,1), filter 0.45s ease;
+}
+.bltr.show { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+
 .tagline {
-  font-size: 13.5px; color: rgba(200,208,232,0.38);
-  letter-spacing: 0.025em; text-align: center;
-  margin: 0; opacity: 0; transform: translateY(6px);
-  transition: opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s;
+  font-size: 16px; color: #6b7280;
+  letter-spacing: 0.01em; text-align: center;
+  margin: 18px 0 0; opacity: 0; transform: translateY(8px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
 }
 .tagline.show { opacity: 1; transform: none; }
 .tagline em { font-style: normal; color: #57E0C3; font-weight: 700; }
-.scroll-hint {
-  position: absolute; z-index: 2; bottom: 34px;
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  opacity: 0; pointer-events: none; transition: opacity 0.9s ease;
+
+/* 스크롤 아이콘 (랜딩페이지와 동일) */
+.scroll-icon {
+  position: absolute; z-index: 2; bottom: 36px;
+  opacity: 0; transition: opacity 1s ease;
 }
-.scroll-hint.show { opacity: 1; }
-.scroll-label { font-size: 9px; letter-spacing: 0.26em; color: rgba(87,224,195,0.3); font-weight: 700; }
-.scroll-mouse { width: 20px; }
-.scroll-arrow { width: 14px; margin-top: 2px; }
+.scroll-icon.show { opacity: 1; }
+.scroll-icon svg { width: 26px; height: 42px; }
+.wheel { animation: scrollWheel 2s ease infinite; }
+@keyframes scrollWheel {
+  0%   { transform: translateY(0);    opacity: 1; }
+  50%  { transform: translateY(11px); opacity: 0.2; }
+  100% { transform: translateY(0);    opacity: 1; }
+}
 
 /* ─── FEATURED SERVICES ─────────────── */
 .features-wrap {
-  background: #0b0c18;
+  background: #ffffff;
   padding: 100px 5% 80px;
 }
 .features-header {
@@ -358,18 +372,19 @@ const simple = [
 }
 .features-badge {
   display: inline-block;
-  padding: 4px 14px; border-radius: 999px;
+  padding: 5px 15px; border-radius: 999px;
   font-size: 0.72rem; font-weight: 700;
-  background: rgba(87,224,195,0.12); color: #57E0C3;
+  background: #DFFAF4; color: #0D9B7A;
   margin-bottom: 16px; letter-spacing: 0.05em;
 }
 .features-title {
   font-size: clamp(1.6rem, 4vw, 2.4rem);
-  font-weight: 900; color: #dde1ef;
+  font-weight: 900; color: #111827;
   margin: 0 0 12px; line-height: 1.25;
 }
-.features-title em { font-style: normal; color: #57E0C3; }
-.features-sub { font-size: 0.95rem; color: rgba(200,208,232,0.4); margin: 0; }
+.features-title em { font-style: normal; color: #0D9B7A; }
+.features-title em.accent-yellow { color: #FFC62A; }
+.features-sub { font-size: 0.95rem; color: #9ca3af; margin: 0; }
 
 .feat-row {
   display: flex;
@@ -380,10 +395,7 @@ const simple = [
 }
 .feat-row.reverse { flex-direction: row-reverse; }
 
-.feat-text {
-  flex: 1;
-  min-width: 0;
-}
+.feat-text { flex: 1; min-width: 0; }
 .feat-badge {
   display: inline-block;
   padding: 3px 10px; border-radius: 999px;
@@ -397,11 +409,11 @@ const simple = [
 }
 .feat-title {
   font-size: clamp(1.4rem, 2.5vw, 1.9rem);
-  font-weight: 900; color: #dde1ef;
+  font-weight: 900; color: #111827;
   margin: 0 0 16px; line-height: 1.25;
 }
 .feat-desc {
-  font-size: 0.9rem; color: rgba(200,208,232,0.5);
+  font-size: 0.9rem; color: #6b7280;
   line-height: 1.75; margin: 0 0 24px;
   white-space: pre-line;
 }
@@ -416,29 +428,25 @@ const simple = [
 .feat-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 .feat-btn {
   display: inline-flex; align-items: center;
-  padding: 10px 24px; border-radius: 12px;
+  padding: 11px 26px; border-radius: 14px;
   font-size: 0.88rem; font-weight: 700;
-  text-decoration: none; transition: opacity 0.2s, transform 0.2s;
+  text-decoration: none; transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
 }
-.feat-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+.feat-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,0.12); }
 
 /* 스크린샷 영역 */
 .feat-shot { flex: 1.2; min-width: 0; }
-
 .shot-wrap {
   position: relative;
   border-radius: 20px;
   overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.07);
-  box-shadow: 0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px var(--accent, #57E0C3) inset;
+  border: 1px solid #ececec;
+  box-shadow: 0 20px 50px rgba(17,24,39,0.10);
   aspect-ratio: 16/10;
-  background: rgba(255,255,255,0.03);
+  background: #f4f6f8;
 }
-.shot-img {
-  width: 100%; height: 100%;
-  object-fit: cover; display: block;
-}
-/* 이미지 로드 실패 시 */
+.shot-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .shot-wrap.no-image .shot-img { display: none; }
 .shot-placeholder {
   display: none;
@@ -451,27 +459,26 @@ const simple = [
   text-align: center;
 }
 .shot-wrap.no-image .shot-placeholder { display: flex; }
-/* 이미지가 없어도 기본 placeholder 보임 (img가 로드 전까지) */
 .shot-wrap:not(.no-image) .shot-placeholder { display: flex; }
 .shot-wrap:not(.no-image) .shot-img { position: absolute; inset: 0; }
-.ph-icon { font-size: 2.5rem; opacity: 0.3; }
-.ph-text { font-size: 0.9rem; font-weight: 700; color: rgba(200,208,232,0.4); margin: 0; }
+.ph-icon { font-size: 2.5rem; opacity: 0.35; }
+.ph-text { font-size: 0.9rem; font-weight: 700; color: #9ca3af; margin: 0; }
 .ph-hint {
-  font-size: 0.72rem; color: rgba(200,208,232,0.2);
+  font-size: 0.72rem; color: #bcc2cc;
   font-family: monospace; margin: 0;
-  background: rgba(255,255,255,0.04);
+  background: #eef0f3;
   padding: 4px 10px; border-radius: 6px;
 }
 
 /* ─── SIMPLE SERVICE GRID ────────────── */
 .simple-wrap {
-  background: #07080f;
+  background: #fafafa;
   padding: 100px 5% 80px;
-  border-top: 1px solid rgba(255,255,255,0.05);
+  border-top: 1px solid #ececec;
 }
 .simple-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   max-width: 1100px;
   margin: 0 auto;
@@ -479,23 +486,22 @@ const simple = [
 .simple-card {
   display: flex; flex-direction: column; gap: 10px;
   padding: 24px; border-radius: 20px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.07);
+  background: #ffffff;
+  border: 1px solid #ececec;
   text-decoration: none;
-  transition: background 0.25s, border-color 0.25s, transform 0.25s;
+  transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
 }
 .simple-card:hover {
-  background: rgba(255,255,255,0.06);
-  border-color: rgba(255,255,255,0.12);
+  border-color: #d8dbe0;
   transform: translateY(-3px);
+  box-shadow: 0 14px 30px rgba(17,24,39,0.08);
 }
 .simple-icon {
-  width: 48px; height: 48px; border-radius: 14px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22px;
+  display: block;
+  margin-bottom: 4px;
 }
-.simple-title { font-size: 0.95rem; font-weight: 800; color: #dde1ef; margin: 0; }
-.simple-desc  { font-size: 0.8rem; color: rgba(200,208,232,0.4); margin: 0; line-height: 1.55; flex: 1; }
+.simple-title { font-size: 0.95rem; font-weight: 800; color: #111827; margin: 0; }
+.simple-desc  { font-size: 0.8rem; color: #9ca3af; margin: 0; line-height: 1.55; flex: 1; }
 .simple-arrow { font-size: 1rem; font-weight: 700; margin-top: 4px; }
 
 /* ─── CTA ────────────────────────────── */
@@ -503,26 +509,24 @@ const simple = [
   position: relative;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  gap: 20px;
+  gap: 18px;
   padding: 120px 24px;
-  background: #0b0c18;
-  border-top: 1px solid rgba(255,255,255,0.05);
+  background: #ffffff;
+  border-top: 1px solid #ececec;
   text-align: center;
   overflow: hidden;
 }
-.cta-glow {
-  position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(87,224,195,0.07) 0%, transparent 70%);
-}
-.cta-logo-svg { position: relative; z-index: 1; margin-bottom: 4px; }
+.cta-cloud-1 { top: -260px; left: -380px; opacity: 0.22; }
+.cta-cloud-2 { bottom: -260px; right: -380px; opacity: 0.22; animation-delay: -3s; }
+.cta-logo-svg { position: relative; z-index: 1; width: 66px; margin-bottom: 6px; }
 .cta-title {
   position: relative; z-index: 1;
   font-size: clamp(1.8rem, 4vw, 2.8rem);
-  font-weight: 900; color: #dde1ef; margin: 0;
+  font-weight: 900; color: #111827; margin: 0;
 }
 .cta-sub {
   position: relative; z-index: 1;
-  font-size: 1rem; color: rgba(200,208,232,0.4); margin: 0;
+  font-size: 1rem; color: #9ca3af; margin: 0;
 }
 .cta-btns {
   position: relative; z-index: 1;
@@ -530,25 +534,30 @@ const simple = [
   justify-content: center; margin-top: 8px;
 }
 .cta-primary {
-  padding: 14px 48px; border-radius: 14px;
-  background: #57E0C3; color: #0F122B;
-  border: none; font-size: 1rem; font-weight: 800;
+  padding: 15px 48px; border-radius: 16px;
+  background: #FFC62A; color: #111827;
+  border: none; font-size: 1rem; font-weight: 700;
   cursor: pointer; font-family: inherit;
-  transition: opacity 0.2s, transform 0.2s;
+  box-shadow: 0 8px 24px rgba(255,198,42,0.28);
+  transition: transform 0.2s, box-shadow 0.2s;
 }
-.cta-primary:hover { opacity: 0.88; transform: translateY(-2px); }
+.cta-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(255,198,42,0.36); }
 .cta-secondary {
-  padding: 14px 32px; border-radius: 14px;
-  border: 1.5px solid rgba(255,255,255,0.1); color: rgba(200,208,232,0.6);
+  padding: 15px 32px; border-radius: 16px;
+  border: 1.5px solid #e5e7eb; color: #6b7280;
   font-size: 1rem; font-weight: 700;
   text-decoration: none;
   transition: border-color 0.2s, color 0.2s;
 }
-.cta-secondary:hover { border-color: rgba(255,255,255,0.2); color: #dde1ef; }
+.cta-secondary:hover { border-color: #cbd0d8; color: #111827; }
 
 @media (max-width: 768px) {
   .feat-row, .feat-row.reverse { flex-direction: column; gap: 36px; }
   .feat-shot { width: 100%; }
   .features-wrap, .simple-wrap { padding: 72px 5% 60px; }
+  .simple-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .simple-grid { grid-template-columns: 1fr; }
 }
 </style>

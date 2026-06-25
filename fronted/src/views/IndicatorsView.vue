@@ -371,7 +371,7 @@ onMounted(loadWatchlist)
               <!-- MACD -->
               <div class="rounded-2xl p-5" style="background:white;border:1px solid #EEF1F5;box-shadow:0 2px 12px rgba(15,18,43,0.04)">
                 <div class="flex items-center gap-2 mb-1">
-                  <BarChart2 class="w-4 h-4" style="color:#57E0C3" />
+                  <BarChart2 class="w-4 h-4" style="color: rgb(255, 215, 106);" />
                   <h3 class="font-bold text-sm" style="color:#0F122B">MACD (12, 26, 9)</h3>
                   <span v-if="indicators.macd.cross" class="text-xs font-bold px-2 py-0.5 rounded-full border" :class="signalClass(indicators.macd.cross)">{{ indicators.macd.cross === 'buy' ? '매수 크로스' : '매도 크로스' }}</span>
                   <button @click="infoOpen.macd = !infoOpen.macd" class="ml-auto flex items-center gap-0.5 transition-colors" style="font-size:0.72rem;color:#6F7485">

@@ -70,25 +70,25 @@ async function scrollBottom() {
         style="height: 480px; transform-origin: bottom right;"
       >
         <!-- 헤더 -->
-        <div class="flex items-center gap-3 px-4 py-3 bg-blue-700 flex-shrink-0">
-          <div class="w-7 h-7 bg-white/20 rounded-xl flex items-center justify-center">
-            <Bot class="w-4 h-4 text-white" />
+        <div class="flex items-center gap-3 px-4 py-3 bg-[#3CD2B6] flex-shrink-0">
+          <div class="w-7 h-7 bg-black/10 rounded-xl flex items-center justify-center">
+            <Bot class="w-4 h-4 text-gray-900" />
           </div>
           <div class="flex-1">
-            <p class="text-sm font-bold text-white">AI 챗봇</p>
-            <p class="text-xs text-blue-200">금융·보안 어시스턴트</p>
+            <p class="text-sm font-bold text-gray-900">AI 챗봇</p>
+            <p class="text-xs text-gray-900/70">금융·보안 어시스턴트</p>
           </div>
           <button
             v-if="messages.length > 0"
             @click="clearChat"
-            class="p-1.5 text-blue-200 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
+            class="p-1.5 text-gray-900/70 hover:text-gray-900 hover:bg-black/10 rounded-lg transition-colors"
             title="대화 초기화"
           >
             <Trash2 class="w-3.5 h-3.5" />
           </button>
           <button
             @click="toggle"
-            class="p-1.5 text-blue-200 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
+            class="p-1.5 text-gray-900/70 hover:text-gray-900 hover:bg-black/10 rounded-lg transition-colors"
           >
             <X class="w-4 h-4" />
           </button>
@@ -109,27 +109,27 @@ async function scrollBottom() {
             :class="msg.role === 'user' ? 'justify-end' : 'justify-start'"
           >
             <div v-if="msg.role === 'model'"
-              class="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-              <Bot class="w-3.5 h-3.5 text-blue-700" />
+              class="w-6 h-6 bg-[#DFFAF4] rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+              <Bot class="w-3.5 h-3.5 text-[#0D9B7A]" />
             </div>
 
             <div
               class="max-w-[75%] px-3 py-2 rounded-2xl text-xs leading-relaxed whitespace-pre-wrap"
               :class="msg.role === 'user'
-                ? 'bg-blue-700 text-white rounded-tr-sm'
+                ? 'bg-[#FFE49C] text-gray-900 rounded-tr-sm'
                 : 'bg-gray-100 text-gray-800 rounded-tl-sm'"
             >{{ msg.text }}</div>
 
             <div v-if="msg.role === 'user'"
-              class="w-6 h-6 bg-blue-700 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-              <User class="w-3.5 h-3.5 text-white" />
+              class="w-6 h-6 bg-[#FFE49C] rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+              <User class="w-3.5 h-3.5 text-gray-900" />
             </div>
           </div>
 
           <!-- 로딩 dots -->
           <div v-if="loading" class="flex gap-2 justify-start">
-            <div class="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Bot class="w-3.5 h-3.5 text-blue-700" />
+            <div class="w-6 h-6 bg-[#DFFAF4] rounded-lg flex items-center justify-center flex-shrink-0">
+              <Bot class="w-3.5 h-3.5 text-[#0D9B7A]" />
             </div>
             <div class="bg-gray-100 rounded-2xl rounded-tl-sm px-3 py-2.5 flex items-center gap-1">
               <span class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay:0ms"></span>
@@ -149,12 +149,12 @@ async function scrollBottom() {
             @keydown.enter.prevent="send"
             placeholder="메시지 입력..."
             :disabled="loading"
-            class="flex-1 px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-xs outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 focus:bg-white disabled:opacity-50 transition-all"
+            class="flex-1 px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-xs outline-none focus:border-[#57E0C3] focus:ring-2 focus:ring-[#57E0C3]/30 focus:bg-white disabled:opacity-50 transition-all"
           />
           <button
             @click="send"
             :disabled="!input.trim() || loading"
-            class="w-9 h-9 flex items-center justify-center rounded-xl bg-blue-700 text-white hover:bg-blue-800 disabled:opacity-40 transition-all flex-shrink-0"
+            class="w-9 h-9 flex items-center justify-center rounded-xl bg-[#57E0C3] text-gray-900 hover:bg-[#3FD4B5] disabled:opacity-40 transition-all flex-shrink-0"
           >
             <Loader2 v-if="loading" class="w-3.5 h-3.5 animate-spin" />
             <Send v-else class="w-3.5 h-3.5" />
@@ -167,7 +167,7 @@ async function scrollBottom() {
     <button
       @click="toggle"
       class="w-14 h-14 rounded-2xl shadow-lg flex items-center justify-center transition-all duration-200"
-      :class="open ? 'bg-gray-700 hover:bg-gray-800' : 'bg-blue-700 hover:bg-blue-800'"
+      :class="open ? 'bg-gray-700 hover:bg-gray-800' : 'bg-[#57E0C3] hover:bg-[#3FD4B5]'"
     >
       <Transition
         enter-active-class="transition duration-150" enter-from-class="opacity-0 rotate-90" enter-to-class="opacity-100 rotate-0"
@@ -175,7 +175,7 @@ async function scrollBottom() {
         mode="out-in"
       >
         <X   v-if="open"  class="w-6 h-6 text-white" />
-        <Bot v-else        class="w-6 h-6 text-white" />
+        <Bot v-else        class="w-6 h-6 text-gray-900" />
       </Transition>
     </button>
 

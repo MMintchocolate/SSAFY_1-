@@ -12,59 +12,59 @@ const dataSources = [
 </script>
 
 <template>
-  <footer style="background:#0F122B;font-family:'Pretendard','Noto Sans KR',sans-serif">
+  <footer style="background:#F5F6F8;border-top:1px solid #E9EBEE;font-family:'Pretendard','Noto Sans KR',sans-serif">
     <div class="max-w-7xl mx-auto px-6 pt-14 pb-8">
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-10">
 
         <!-- 브랜드 -->
         <div>
           <div class="flex items-center gap-2.5 mb-4">
-            <svg width="34" height="28" viewBox="0 0 46 38" fill="none">
-              <circle cx="15" cy="9" r="6" fill="#FFA726"/>
-              <circle cx="31" cy="9" r="6" fill="#4ECBA8"/>
-              <path d="M7 20 Q23 36 39 20" stroke="#57E0C3" stroke-width="6" stroke-linecap="round" fill="none"/>
+            <svg width="34" height="28" viewBox="0 0 100 80" fill="none">
+              <circle cx="28" cy="24" r="14" fill="#FFC62A"/>
+              <circle cx="72" cy="24" r="14" fill="#57E0C3"/>
+              <path d="M 10,56 Q 50,82 90,56" stroke="#111827" stroke-width="7" stroke-linecap="round" fill="none"/>
             </svg>
-            <span class="font-black text-xl" style="color:white;letter-spacing:-0.5px">moni</span>
+            <span class="font-black text-xl" style="color:#111827;letter-spacing:-0.5px">moni</span>
           </div>
-          <p class="text-sm leading-relaxed mb-5" style="color:#6F7485">
+          <p class="text-sm leading-relaxed mb-5" style="color:#6B7280">
             금융상품 비교부터 투자 정보까지<br>한 번에 관리하는 스마트 금융 플랫폼
           </p>
           <div class="flex gap-2">
-            <button class="w-9 h-9 rounded-xl flex items-center justify-center transition-colors" style="background:rgba(255,255,255,0.06)"><Share2 class="w-4 h-4" style="color:#6F7485" /></button>
-            <button class="w-9 h-9 rounded-xl flex items-center justify-center transition-colors" style="background:rgba(255,255,255,0.06)"><Camera class="w-4 h-4" style="color:#6F7485" /></button>
-            <button class="w-9 h-9 rounded-xl flex items-center justify-center transition-colors" style="background:rgba(255,255,255,0.06)"><PlayCircle class="w-4 h-4" style="color:#6F7485" /></button>
+            <button class="w-9 h-9 rounded-xl flex items-center justify-center transition-colors" style="background:#EAECEF"><Share2 class="w-4 h-4" style="color:#6B7280" /></button>
+            <button class="w-9 h-9 rounded-xl flex items-center justify-center transition-colors" style="background:#EAECEF"><Camera class="w-4 h-4" style="color:#6B7280" /></button>
+            <button class="w-9 h-9 rounded-xl flex items-center justify-center transition-colors" style="background:#EAECEF"><PlayCircle class="w-4 h-4" style="color:#6B7280" /></button>
           </div>
         </div>
 
         <!-- 서비스 -->
         <div>
-          <h4 class="font-bold text-sm mb-4" style="color:#57E0C3;letter-spacing:0.08em">서비스</h4>
+          <h4 class="font-bold text-sm mb-4" style="color:#0D9B7A;letter-spacing:0.08em">서비스</h4>
           <ul class="space-y-2.5">
             <li v-for="s in services" :key="s">
-              <a href="#" class="text-sm transition-colors" style="color:#6F7485" onmouseover="this.style.color='white'" onmouseout="this.style.color='#6F7485'">{{ s }}</a>
+              <a href="#" class="text-sm transition-colors" style="color:#6B7280" onmouseover="this.style.color='#111827'" onmouseout="this.style.color='#6B7280'">{{ s }}</a>
             </li>
           </ul>
         </div>
 
         <!-- 고객지원 -->
         <div>
-          <h4 class="font-bold text-sm mb-4" style="color:#57E0C3;letter-spacing:0.08em">고객지원</h4>
+          <h4 class="font-bold text-sm mb-4" style="color:#0D9B7A;letter-spacing:0.08em">고객지원</h4>
           <ul class="space-y-2.5">
             <li v-for="s in support" :key="s">
-              <a href="#" class="text-sm transition-colors" style="color:#6F7485" onmouseover="this.style.color='white'" onmouseout="this.style.color='#6F7485'">{{ s }}</a>
+              <a href="#" class="text-sm transition-colors" style="color:#6B7280" onmouseover="this.style.color='#111827'" onmouseout="this.style.color='#6B7280'">{{ s }}</a>
             </li>
           </ul>
         </div>
 
         <!-- 공공데이터 출처 -->
         <div>
-          <h4 class="font-bold text-sm mb-4" style="color:#57E0C3;letter-spacing:0.08em">공공데이터 출처</h4>
+          <h4 class="font-bold text-sm mb-4" style="color:#0D9B7A;letter-spacing:0.08em">공공데이터 출처</h4>
           <ul class="space-y-2.5">
             <li v-for="src in dataSources" :key="src.label" class="flex items-start gap-1.5">
-              <ExternalLink class="w-3 h-3 mt-0.5 flex-shrink-0" style="color:#57E0C3;opacity:0.5" />
+              <ExternalLink class="w-3 h-3 mt-0.5 flex-shrink-0" style="color:#0D9B7A;opacity:0.7" />
               <a :href="src.url" target="_blank" rel="noopener noreferrer"
-                class="text-sm transition-colors" style="color:#6F7485"
-                onmouseover="this.style.color='white'" onmouseout="this.style.color='#6F7485'"
+                class="text-sm transition-colors" style="color:#6B7280"
+                onmouseover="this.style.color='#111827'" onmouseout="this.style.color='#6B7280'"
               >{{ src.label }}</a>
             </li>
           </ul>
@@ -72,17 +72,17 @@ const dataSources = [
       </div>
 
       <!-- 하단 -->
-      <div class="pt-6" style="border-top:1px solid rgba(255,255,255,0.07)">
+      <div class="pt-6" style="border-top:1px solid #E1E3E7">
         <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-3">
-          <p class="text-xs" style="color:rgba(111,116,133,0.7)">© 2026 moni Corp. All rights reserved.</p>
+          <p class="text-xs" style="color:#9CA3AF">© 2026 moni Corp. All rights reserved.</p>
           <div class="flex flex-wrap gap-4 justify-center">
-            <a href="#" class="text-xs transition-colors" style="color:rgba(111,116,133,0.7)" onmouseover="this.style.color='#6F7485'" onmouseout="this.style.color='rgba(111,116,133,0.7)'">이용약관</a>
-            <a href="#" class="text-xs transition-colors" style="color:rgba(111,116,133,0.7)" onmouseover="this.style.color='#6F7485'" onmouseout="this.style.color='rgba(111,116,133,0.7)'">개인정보처리방침</a>
-            <a href="#" class="text-xs transition-colors" style="color:rgba(111,116,133,0.7)" onmouseover="this.style.color='#6F7485'" onmouseout="this.style.color='rgba(111,116,133,0.7)'">쿠키정책</a>
-            <a href="#" class="text-xs transition-colors" style="color:rgba(111,116,133,0.7)" onmouseover="this.style.color='#6F7485'" onmouseout="this.style.color='rgba(111,116,133,0.7)'">공공데이터 출처</a>
+            <a href="#" class="text-xs transition-colors" style="color:#9CA3AF" onmouseover="this.style.color='#6B7280'" onmouseout="this.style.color='#9CA3AF'">이용약관</a>
+            <a href="#" class="text-xs transition-colors" style="color:#9CA3AF" onmouseover="this.style.color='#6B7280'" onmouseout="this.style.color='#9CA3AF'">개인정보처리방침</a>
+            <a href="#" class="text-xs transition-colors" style="color:#9CA3AF" onmouseover="this.style.color='#6B7280'" onmouseout="this.style.color='#9CA3AF'">쿠키정책</a>
+            <a href="#" class="text-xs transition-colors" style="color:#9CA3AF" onmouseover="this.style.color='#6B7280'" onmouseout="this.style.color='#9CA3AF'">공공데이터 출처</a>
           </div>
         </div>
-        <p class="text-xs text-center" style="color:rgba(111,116,133,0.5)">
+        <p class="text-xs text-center" style="color:#ADB2BD">
           본 플랫폼은 정보 제공 목적으로만 운영되며, 투자 조언을 제공하지 않습니다. 금융 결정은 반드시 전문 재무상담사와 상담 후 진행하시기 바랍니다.
         </p>
       </div>
