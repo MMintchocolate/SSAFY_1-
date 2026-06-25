@@ -1,56 +1,56 @@
 {
   "symbol": "AAPL",
   "yf_ticker": "AAPL",
-  "trained_at": "2026-06-23 11:10",
-  "total_rows": 1091,
-  "train_rows": 872,
+  "trained_at": "2026-06-25 15:16",
+  "total_rows": 1092,
+  "train_rows": 873,
   "test_rows": 219,
   "accuracy": 0.5616,
   "class_dist": {
-    "0": 642,
+    "0": 643,
     "1": 131,
     "2": 318
   },
   "feat_imp": [
     {
       "feature": "feat_ma_ratio",
-      "importance": 555
+      "importance": 612
     },
     {
       "feature": "feat_macd_hist",
-      "importance": 391
+      "importance": 329
     },
     {
       "feature": "feat_bb_pos",
-      "importance": 313
+      "importance": 305
     },
     {
       "feature": "feat_rsi",
-      "importance": 281
+      "importance": 272
     },
     {
       "feature": "feat_return_1d",
-      "importance": 215
-    },
-    {
-      "feature": "feat_vol_ratio",
-      "importance": 207
+      "importance": 216
     },
     {
       "feature": "feat_usd_idx_chg",
-      "importance": 205
-    },
-    {
-      "feature": "feat_return_5d",
-      "importance": 194
+      "importance": 216
     },
     {
       "feature": "feat_return_3d",
-      "importance": 190
+      "importance": 205
+    },
+    {
+      "feature": "feat_vol_ratio",
+      "importance": 196
+    },
+    {
+      "feature": "feat_return_5d",
+      "importance": 179
     },
     {
       "feature": "feat_us_10y_chg",
-      "importance": 155
+      "importance": 164
     }
   ]
 }
