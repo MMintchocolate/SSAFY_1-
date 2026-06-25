@@ -245,7 +245,13 @@ const allAnswered = computed(() => answers.value.length === QUESTIONS.length && 
 
         <!-- ── LOADING ── -->
         <div v-else-if="step === 'loading'" class="text-center py-20">
-          <div class="text-5xl mb-6 animate-bounce">🤖</div>
+          <div class="mb-6 animate-bounce flex justify-center">
+            <svg width="80" height="64" viewBox="0 0 100 80" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="28" cy="24" r="14" fill="#FFC108" />
+              <circle cx="72" cy="24" r="14" fill="#26C6A2" />
+              <path d="M 10,56 Q 50,80 90,56" stroke="#1a1a2e" stroke-width="7" fill="none" stroke-linecap="round" />
+            </svg>
+          </div>
           <p class="font-bold mb-2" style="font-size:1.1rem;color:#0F122B">AI가 분석 중이에요</p>
           <p style="color:#6F7485;font-size:0.9rem">답변을 바탕으로 투자 성향을 파악하고 있어요...</p>
           <div class="flex justify-center gap-1.5 mt-8">
