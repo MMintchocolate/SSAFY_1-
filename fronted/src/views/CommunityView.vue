@@ -1,6 +1,6 @@
 <script setup>
 // @ts-nocheck
-import { ref, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import {
   Users, PencilLine, Eye, MessageCircle,
   X, Send, Trash2, LogIn,
@@ -32,27 +32,39 @@ watch(() => route.query.board, (val) => {
 // ── Post list ──────────────────────────────────────────────────────────────
 const posts       = ref([])
 const postsTotal  = ref(0)
-const hasMore     = ref(false)
 const page        = ref(1)
+const PAGE_SIZE   = 5
 const listLoading = ref(false)
 
-async function fetchPosts(reset = false) {
-  if (reset) page.value = 1
+const totalPages = computed(() => Math.max(1, Math.ceil(postsTotal.value / PAGE_SIZE)))
+
+const pageNumbers = computed(() => {
+  const total = totalPages.value
+  const cur   = page.value
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  // 현재 페이지 주변 ± 2, 첫·끝 페이지는 항상 표시
+  const pages = new Set([1, total, cur - 2, cur - 1, cur, cur + 1, cur + 2])
+  return [...pages].filter(p => p >= 1 && p <= total).sort((a, b) => a - b)
+})
+
+async function fetchPosts(resetPage = false) {
+  if (resetPage) page.value = 1
   listLoading.value = true
   try {
     const res = await fetch(`${API}/posts/?board_type=${activeBoard.value}&page=${page.value}`)
     const data = await res.json()
-    posts.value    = reset ? data.results : [...posts.value, ...data.results]
+    posts.value      = data.results
     postsTotal.value = data.count
-    hasMore.value  = data.has_next
   } finally {
     listLoading.value = false
   }
 }
 
-function loadMore() {
-  page.value++
+function goToPage(n) {
+  if (n < 1 || n > totalPages.value || n === page.value) return
+  page.value = n
   fetchPosts()
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 watch(activeBoard, () => fetchPosts(true))
@@ -268,11 +280,30 @@ function initials(name) {
             </div>
           </div>
 
-          <div v-if="hasMore" class="text-center pt-4">
-            <button @click="loadMore" :disabled="listLoading"
-              class="px-6 py-2.5 font-semibold rounded-xl text-sm transition-all disabled:opacity-50"
-              style="border:1.5px solid #EEF1F5;color:#6F7485"
-            >{{ listLoading ? '불러오는 중...' : '더보기' }}</button>
+          <!-- 페이지네이션 -->
+          <div v-if="totalPages > 1" class="flex items-center justify-center gap-1 pt-6">
+            <!-- 이전 -->
+            <button @click="goToPage(page - 1)" :disabled="page === 1"
+              class="w-9 h-9 flex items-center justify-center rounded-xl font-bold text-sm transition-all disabled:opacity-30"
+              style="border:1.5px solid #EEF1F5;color:#6F7485">‹</button>
+
+            <template v-for="(n, i) in pageNumbers" :key="n">
+              <!-- 생략 표시 (앞 페이지와 2 이상 차이) -->
+              <span v-if="i > 0 && n - pageNumbers[i-1] > 1"
+                class="w-9 h-9 flex items-center justify-center text-sm"
+                style="color:#6F7485">…</span>
+              <button @click="goToPage(n)"
+                class="w-9 h-9 flex items-center justify-center rounded-xl font-bold text-sm transition-all"
+                :style="n === page
+                  ? 'background:#0F122B;color:white'
+                  : 'border:1.5px solid #EEF1F5;color:#6F7485'"
+              >{{ n }}</button>
+            </template>
+
+            <!-- 다음 -->
+            <button @click="goToPage(page + 1)" :disabled="page === totalPages"
+              class="w-9 h-9 flex items-center justify-center rounded-xl font-bold text-sm transition-all disabled:opacity-30"
+              style="border:1.5px solid #EEF1F5;color:#6F7485">›</button>
           </div>
         </div>
       </div>

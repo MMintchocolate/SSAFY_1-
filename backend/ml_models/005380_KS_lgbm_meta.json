@@ -1,0 +1,56 @@
+{
+  "symbol": "005380.KS",
+  "yf_ticker": "005380.KS",
+  "trained_at": "2026-06-25 22:50",
+  "total_rows": 1057,
+  "train_rows": 845,
+  "test_rows": 212,
+  "accuracy": 0.3726,
+  "class_dist": {
+    "0": 512,
+    "1": 201,
+    "2": 344
+  },
+  "feat_imp": [
+    {
+      "feature": "feat_ma_ratio",
+      "importance": 543
+    },
+    {
+      "feature": "feat_macd_hist",
+      "importance": 356
+    },
+    {
+      "feature": "feat_rsi",
+      "importance": 294
+    },
+    {
+      "feature": "feat_bb_pos",
+      "importance": 227
+    },
+    {
+      "feature": "feat_return_3d",
+      "importance": 199
+    },
+    {
+      "feature": "feat_usd_idx_chg",
+      "importance": 192
+    },
+    {
+      "feature": "feat_return_5d",
+      "importance": 168
+    },
+    {
+      "feature": "feat_us_10y_chg",
+      "importance": 161
+    },
+    {
+      "feature": "feat_vol_ratio",
+      "importance": 123
+    },
+    {
+      "feature": "feat_return_1d",
+      "importance": 107
+    }
+  ]
+}

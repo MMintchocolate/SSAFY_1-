@@ -21,19 +21,27 @@
 
       <template v-else>
         <div class="space-y-3">
-          <div>
-            <label class="block font-semibold mb-1" style="font-size:0.72rem;color:#0F122B">UID</label>
-            <input v-model="form.uid" type="text" placeholder="이메일의 UID 값 붙여넣기"
-              class="w-full px-4 py-2.5 text-sm rounded-xl outline-none transition-all"
-              style="border:1.5px solid #EEF1F5;color:#0F122B"
-            />
-          </div>
-          <div>
-            <label class="block font-semibold mb-1" style="font-size:0.72rem;color:#0F122B">TOKEN</label>
-            <input v-model="form.token" type="text" placeholder="이메일의 TOKEN 값 붙여넣기"
-              class="w-full px-4 py-2.5 text-sm rounded-xl outline-none transition-all"
-              style="border:1.5px solid #EEF1F5;color:#0F122B"
-            />
+          <!-- 링크로 직접 들어오지 않은 경우에만 수동 입력 표시 -->
+          <template v-if="!route.query.uid || !route.query.token">
+            <div>
+              <label class="block font-semibold mb-1" style="font-size:0.72rem;color:#0F122B">UID</label>
+              <input v-model="form.uid" type="text" placeholder="이메일의 UID 값 붙여넣기"
+                class="w-full px-4 py-2.5 text-sm rounded-xl outline-none transition-all"
+                style="border:1.5px solid #EEF1F5;color:#0F122B"
+              />
+            </div>
+            <div>
+              <label class="block font-semibold mb-1" style="font-size:0.72rem;color:#0F122B">TOKEN</label>
+              <input v-model="form.token" type="text" placeholder="이메일의 TOKEN 값 붙여넣기"
+                class="w-full px-4 py-2.5 text-sm rounded-xl outline-none transition-all"
+                style="border:1.5px solid #EEF1F5;color:#0F122B"
+              />
+            </div>
+          </template>
+          <!-- 링크로 들어온 경우 안내 메시지 -->
+          <div v-else class="flex items-center gap-2 px-4 py-3 rounded-xl" style="background:#DFFAF4">
+            <Check class="w-4 h-4 flex-shrink-0" style="color:#0D9B7A" />
+            <p class="text-sm font-semibold" style="color:#0D9B7A">이메일 링크로 인증되었습니다. 새 비밀번호만 입력하세요.</p>
           </div>
           <div class="relative">
             <label class="block font-semibold mb-1" style="font-size:0.72rem;color:#0F122B">새 비밀번호</label>
@@ -73,9 +81,11 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { KeyRound, Eye, EyeOff, Check, AlertCircle } from '@lucide/vue'
 
+const route  = useRoute()
 const step   = ref('form')
 const showPw = ref(false)
 const loading = ref(false)
@@ -86,6 +96,11 @@ const form = ref({
   token:           '',
   password:        '',
   passwordConfirm: '',
+})
+
+onMounted(() => {
+  if (route.query.uid)   form.value.uid   = route.query.uid
+  if (route.query.token) form.value.token = route.query.token
 })
 
 async function submit() {

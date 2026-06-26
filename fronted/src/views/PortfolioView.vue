@@ -93,15 +93,21 @@ const todayPnl    = computed(() => {
 // ── 도넛 차트 ────────────────────────────────────────────────────
 const PALETTE = ['#57E0C3','#FFD76A','#0F122B','#A78BFA','#E5323B','#3B7FED','#FFA726','#4ECBA8','#60A5FA','#F472B6']
 
+// 현재가 없으면 원가로 대체 → 전 종목 동일 기준 표시
+const donutItems = computed(() => enriched.value.map(h => ({
+  ...h,
+  displayValue: h.value ?? h.cost,
+})))
+
+const donutTotal = computed(() => donutItems.value.reduce((s, h) => s + h.displayValue, 0))
+
 const donutData = computed(() => {
-  const items = enriched.value.filter(h => h.value != null)
-  if (!items.length) return null
-  const total = items.reduce((s, h) => s + h.value, 0)
+  if (!donutItems.value.length || donutTotal.value === 0) return null
   return {
-    labels: items.map(h => h.name),
+    labels: donutItems.value.map(h => h.name),
     datasets: [{
-      data: items.map(h => parseFloat((h.value / total * 100).toFixed(1))),
-      backgroundColor: PALETTE.slice(0, items.length),
+      data: donutItems.value.map(h => parseFloat((h.displayValue / donutTotal.value * 100).toFixed(1))),
+      backgroundColor: PALETTE.slice(0, donutItems.value.length),
       borderWidth: 2,
       borderColor: '#ffffff',
     }],
@@ -274,10 +280,13 @@ function pnlColor(n) {
                 <Doughnut :data="donutData" :options="donutOpts" />
               </div>
               <div class="mt-4 space-y-1.5">
-                <div v-for="(h, i) in enriched.filter(x => x.value != null)" :key="h.symbol" class="flex items-center gap-2">
+                <div v-for="(h, i) in donutItems" :key="h.symbol" class="flex items-center gap-2">
                   <div class="w-2.5 h-2.5 rounded-sm flex-shrink-0" :style="`background:${PALETTE[i]}`"></div>
                   <span class="text-xs flex-1 truncate" style="color:#0F122B">{{ h.name }}</span>
-                  <span class="text-xs font-bold" style="color:#6F7485">{{ totalValue ? (h.value / totalValue * 100).toFixed(1) : '-' }}%</span>
+                  <span class="text-xs font-bold" style="color:#6F7485">
+                    {{ donutTotal > 0 ? (h.displayValue / donutTotal * 100).toFixed(1) : '-' }}%
+                    <span v-if="h.value == null" class="ml-0.5" style="color:#A78BFA;font-size:0.65rem">원가</span>
+                  </span>
                 </div>
               </div>
             </div>

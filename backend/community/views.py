@@ -10,7 +10,7 @@ from .serializers import (
     PostWriteSerializer, CommentSerializer, MyCommentSerializer,
 )
 
-PAGE_SIZE = 20
+PAGE_SIZE = 5
 
 
 # ── Posts ─────────────────────────────────────────────────────────────────────
